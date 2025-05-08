@@ -7,12 +7,12 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-torch = "^2.4"
+torch = "^2.7.0"
 tqdm = "^4.66"
 types-tqdm = "^4.66"
 ptflops = "^0.7"
 numpy = "^2.1"
-tiktoken = "^0.7"
+tiktoken = "^0.9"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.0.3"
