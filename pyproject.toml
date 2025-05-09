@@ -62,4 +62,5 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 train = "scratchgpt.main:main"
 infer = "scratchgpt.infer:main"
+infer_neat = "scratchgpt.infer_neat:main"
 tiktoken = "scratchgpt.tokenizer.tiktoken:main"

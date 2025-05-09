@@ -39,13 +39,15 @@ def parse_args() -> argparse.Namespace:
         default=BLOCK_SIZE * 2,
         help="Number of tokens you want the model produce",
     )
-    parser.add_argument("-t", "--tokenizer", help="please!", required=True, type=str)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    tokenizer = get_tokenizer(args.experiment, args.tokenizer)
+    tokenizer = get_tokenizer(args.experiment, "neat")
+
+    last_token = "_E_GEN_"
+    last_token_id = tokenizer.encode(last_token)[0]
 
     device = torch.device(args.device)
     best_model_path = get_best_model_weights_path(args.experiment)
@@ -59,7 +61,7 @@ def main() -> None:
             sys.exit(0)
 
         context = torch.tensor(tokenizer.encode(prompt)).unsqueeze(0).to(device)
-        generated = model.generate(context, max_new_tokens=args.max_tokens)
+        generated = model.generate(context, max_new_tokens=args.max_tokens, stop_token=last_token_id)
         inferred = tokenizer.decode(generated[0].tolist())
         print(inferred)
         print("-----------------------------------")
