@@ -47,6 +47,7 @@ def parse_args() -> argparse.Namespace:
         required=True,
         type=str,
     )
+    parser.add_argument("-d", "--default_tokenizer", help="please!", required=True, type=str)
     return parser.parse_args()
 
 
@@ -264,7 +265,7 @@ def main() -> None:
 
     text_provider = get_text_provider(args.train_source)
 
-    tokenizer = get_tokenizer(args.experiment)
+    tokenizer = get_tokenizer(args.experiment, args.default_tokenizer)
 
     train_dataset = TextDataset(text_provider, tokenizer, BLOCK_SIZE, "train", 0.9)
     val_dataset = TextDataset(text_provider, tokenizer, BLOCK_SIZE, "validation", 0.1)
