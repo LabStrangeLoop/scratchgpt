@@ -99,12 +99,12 @@ class NeatGenomeTokenizer(Tokenizer):
             self._add_token(token)
 
         # 5. Activation Function Names
-        activations = ["sigmoid", "relu", "tanh", "inv", "log", "abs", "clamped"]
+        activations = list("abs clamped cube exp gauss hat identity inv log relu sigmoid sin softplus square tanh".split())
         for token in activations:
             self._add_token(token)
 
         # 6. Aggregation Function Names
-        aggregations = ["sum", "product", "mean", "max"]
+        aggregations = list("sum product mean min max median maxabs".split())
         for token in aggregations:
             self._add_token(token)
 

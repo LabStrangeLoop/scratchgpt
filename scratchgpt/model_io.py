@@ -47,7 +47,8 @@ def get_tokenizer(exp_path: str, default_tokenizer: str) -> Tokenizer:
     else:
         match default_tokenizer:
             case "neat":
-                tokenizer = NeatGenomeTokenizer(10, 10, 2)
+                # TODO: Aleks likes magic numbers
+                tokenizer = NeatGenomeTokenizer(-3.0, 3.0, 2)
             case _:
                 tokenizer = TiktokenWrapper("cl100k_base")
     return tokenizer
