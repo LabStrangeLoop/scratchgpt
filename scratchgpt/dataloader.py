@@ -46,7 +46,7 @@ class FolderTextProvider(TextProvider):
                     file_path = os.path.join(root, file_name)
                     print(f"Loading data from {file_path}")
                     with open(file_path, "r", encoding="utf-8") as f:
-                        self._data += f.read() + "\n"  # Concatenate with a
+                        self._data += f.read() + " "  # Concatenate with a
                         # newline between files, could be the place to add
                         # special tokens
 
