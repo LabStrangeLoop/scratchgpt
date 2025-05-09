@@ -1,5 +1,6 @@
 import argparse
 import sys
+import tempfile
 
 import torch
 
@@ -74,6 +75,9 @@ def main() -> None:
         print(inferred)
         print("-----------------------------------")
 
+        with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+            tmpfile.write(inferred.encode("UTF-8"))
+            print(f"{tmpfile.name =}")
 
 if __name__ == "__main__":
     main()
