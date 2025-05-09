@@ -39,6 +39,14 @@ def parse_args() -> argparse.Namespace:
         default=BLOCK_SIZE * 2,
         help="Number of tokens you want the model produce",
     )
+
+    parser.add_argument(
+        "-t",
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="How hot is Dario?",
+    )
     return parser.parse_args()
 
 
@@ -61,7 +69,7 @@ def main() -> None:
             sys.exit(0)
 
         context = torch.tensor(tokenizer.encode(prompt)).unsqueeze(0).to(device)
-        generated = model.generate(context, max_new_tokens=args.max_tokens, stop_token=last_token_id)
+        generated = model.generate(context, max_new_tokens=args.max_tokens, stop_token=last_token_id, temperature=args.temperature)
         inferred = tokenizer.decode(generated[0].tolist())
         print(inferred)
         print("-----------------------------------")
