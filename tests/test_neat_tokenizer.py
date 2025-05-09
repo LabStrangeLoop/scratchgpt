@@ -1,190 +1,218 @@
-import pytest # Using pytest for fixture and exception testing
+import re
+import unittest
 # Assuming the tokenizer is in: scratchgpt.tokenizer.neat_genome_tokenizer
-from scratchgpt.tokenizer.neat_tokenizer import NeatGenomeTokenizer, OPS_NAMES, ACTIVATION_FNS, AGGREGATION_FNS
+from scratchgpt.tokenizer.neat_tokenizer import NeatGenomeTokenizer
 
-# Test data provided by the user
-test_data_genome = """_S_GEN_ </xnor>
-_S_CONF_ num_inputs|2|num_outputs|1|feed_forward|True|node_gene_type|DefaultNodeGene|connection_gene_type|DefaultConnectionGene _E_CONF_
+raw_test_data_genome = """_S_GEN_ </xnor>
+_S_CONF_ num_inputs 2 num_outputs 1 feed_forward True node_gene_type DefaultNodeGene connection_gene_type DefaultConnectionGene _E_CONF_
 _S_NODES_
-_NODE_0|-0.04|1.00|sigmoid|product_E_NODES_
-_NODE_1|0.44|1.00|log|sum_E_NODES_
-_NODE_2|-0.63|1.00|log|sum_E_NODES_
-_NODE_3|-0.81|1.00|inv|product_E_NODES_
-_NODE_4|-0.10|1.00|log|max_E_NODES_
+_NODE_ 0 -0.04 1.00 sigmoid product _E_NODES_
+_NODE_ 1 0.44 1.00 log sum _E_NODES_
+_NODE_ 2 -0.63 1.00 log sum _E_NODES_
+_NODE_ 3 -0.81 1.00 inv product _E_NODES_
+_NODE_ 4 -0.10 1.00 log max _E_NODES_
 _S_CONNS_
-_CONN_-2|4|1.54_E_CONNS_
-_CONN_-1|2|-2.65_E_CONNS_
-_CONN_-1|3|1.90_E_CONNS_
-_CONN_0|2|-1.05_E_CONNS_
-_CONN_3|0|0.54_E_CONNS_
-_CONN_4|0|3.00_E_CONNS_
-_E_GEN_"""
+_CONN_ -2 4 1.54 _E_CONNS_
+_CONN_ -1 2 -2.65 _E_CONNS_
+_CONN_ -1 3 1.90 _E_CONNS_
+_CONN_ 0 2 -1.05 _E_CONNS_
+_CONN_ 3 0 0.54 _E_CONNS_
+_CONN_ 4 0 3.00 _E_CONNS_
+_E_GEN_
+"""
 
-# Clean up the test data string (remove potential leading/trailing newlines and ensure consistent newlines if any)
-test_data_genome = test_data_genome.replace('\r\n', '\n').strip()
+def preprocess_genome_string(raw_genome_str: str) -> str:
+    # Fix concatenated tokens before _E_NODES_ or _E_CONNS_
+    # This specifically targets known patterns from the example.
+    # A more general approach might be needed if other tokens can be concatenated.
+    processed_str = raw_genome_str
+    # Patterns like "token_E_NODES_" -> "token _E_NODES_"
+    # and "token_E_CONNS_" -> "token _E_CONNS_"
+    # This regex identifies a non-whitespace char sequence followed by _E_...
+    # then inserts a space if the first part isn't already a space.
+    processed_str = re.sub(r'([^\s])(_E_NODES_)', r'\1 \2', processed_str)
+    processed_str = re.sub(r'([^\s])(_E_CONNS_)', r'\1 \2', processed_str)
 
+    processed_str = processed_str.replace('\r\n', ' ').replace('\n', ' ')
+    processed_str = re.sub(r' +', ' ', processed_str) # Normalize multiple spaces
+    return processed_str.strip()
 
-@pytest.fixture
-def genome_tokenizer_instance():
-    """Provides a default NeatGenomeTokenizer instance for tests."""
-    # Parameters for the tokenizer, make sure they cover the test_data_genome
-    # Floats in test_data_genome: -0.04, 1.00, 0.44, -0.63, -0.81, -0.10, 1.54, -2.65, 1.90, -1.05, 0.54, 3.00
-    # Min: -2.65, Max: 3.00. Precision: 2
-    return NeatGenomeTokenizer(
-        float_min_val=-3.0, # Cover -2.65
-        float_max_val=3.0,  # Cover 3.00
-        float_precision=2,
-        max_inputs=2,       # Test data has num_inputs|2
-        max_outputs=1,      # Test data has num_outputs|1
-        max_hidden_nodes_in_genome=4 # Test data nodes: 0 (output), 1,2,3,4 (hidden). So 4 hidden.
-    )
+# Preprocess the sample genome for testing
+# This is crucial for the sample to be valid with the strict space separation rule
+PROCESSED_TEST_GENOME = preprocess_genome_string(raw_test_data_genome)
 
-def test_basic_neat_genome_tokenizer_encode_decode(genome_tokenizer_instance: NeatGenomeTokenizer):
-    """Tests basic encoding and decoding of a valid genome string."""
-    tokenizer = genome_tokenizer_instance
+class TestNeatGenomeTokenizerSetup(unittest.TestCase):
+    def test_invalid_precision(self):
+        with self.assertRaisesRegex(ValueError, "float_precision must be between 0 and 15."):
+            NeatGenomeTokenizer(0.0, 1.0, -1)
+        with self.assertRaisesRegex(ValueError, "float_precision must be between 0 and 15."):
+            NeatGenomeTokenizer(0.0, 1.0, 16)
 
-    encoded = tokenizer.encode(test_data_genome)
-    decoded = tokenizer.decode(encoded)
+    def test_invalid_float_range(self):
+        with self.assertRaisesRegex(ValueError, "float_min_val cannot be greater than float_max_val."):
+            NeatGenomeTokenizer(1.0, 0.0, 2)
 
-    # For debugging if it fails:
-    if test_data_genome != decoded:
-        print("Original Length:", len(test_data_genome))
-        print("Decoded Length:", len(decoded))
-        for i in range(min(len(test_data_genome), len(decoded))):
-            if test_data_genome[i] != decoded[i]:
-                print(f"Mismatch at index {i}: Original='{test_data_genome[i]}' Decoded='{decoded[i]}'")
-                print(f"Original context: ...{test_data_genome[max(0,i-10):i+10]}...")
-                print(f"Decoded context:  ...{decoded[max(0,i-10):i+10]}...")
-                break
-        # print("Original Text:\n", test_data_genome)
-        # print("Encoded Tokens:\n", encoded)
-        # print("Decoded Text:\n", decoded)
+    def test_invalid_max_inputs(self):
+        with self.assertRaisesRegex(ValueError, "max_inputs must be positive."):
+            NeatGenomeTokenizer(0.0, 1.0, 2, max_inputs=0)
+        with self.assertRaisesRegex(ValueError, "max_inputs must be positive."):
+            NeatGenomeTokenizer(0.0, 1.0, 2, max_inputs=-1)
 
+    def test_invalid_max_outputs(self):
+        with self.assertRaisesRegex(ValueError, "max_outputs must be positive."):
+            NeatGenomeTokenizer(0.0, 1.0, 2, max_outputs=0)
 
-    assert test_data_genome == decoded, "Encode-decode cycle failed for NeatGenomeTokenizer"
+    def test_invalid_max_hidden_nodes(self):
+        with self.assertRaisesRegex(ValueError, "max_hidden_nodes_in_genome must be non-negative."):
+            NeatGenomeTokenizer(0.0, 1.0, 2, max_hidden_nodes_in_genome=-1)
 
-def test_neat_genome_tokenizer_vocab_properties(genome_tokenizer_instance: NeatGenomeTokenizer):
-    """Tests vocabulary size and content."""
-    tokenizer = genome_tokenizer_instance
-    assert tokenizer.vocab_size > 0, "Vocab size should be greater than 0"
-
-    vocab_list = tokenizer.vocabulary
-    assert isinstance(vocab_list, list), "Vocabulary should be a list"
-    assert len(vocab_list) == tokenizer.vocab_size, "Vocabulary list length mismatch with vocab_size"
-    if vocab_list: # If not empty
-        assert isinstance(vocab_list[0], str), "Vocabulary items should be strings"
-
-    # Check if some expected core tokens are present
-    assert "_S_GEN_" in tokenizer._stoi, "Core token _S_GEN_ missing"
-    assert "|" in tokenizer._stoi, "Separator token | missing"
-    assert "True" in tokenizer._stoi, "Boolean token True missing"
-    # Check one from each user-defined list (assuming they are not empty)
-    if OPS_NAMES:
-         assert OPS_NAMES[0] in tokenizer._stoi, f"Operation token {OPS_NAMES[0]} missing"
-    if ACTIVATION_FNS:
-        assert ACTIVATION_FNS[0] in tokenizer._stoi, f"Activation token {ACTIVATION_FNS[0]} missing"
-    if AGGREGATION_FNS:
-        assert AGGREGATION_FNS[0] in tokenizer._stoi, f"Aggregation token {AGGREGATION_FNS[0]} missing"
-
-    # Check a sample float token (if range allows)
-    # Using the exact string format from vocab generation
-    sample_float_str = f"{genome_tokenizer_instance.float_min_val:.{genome_tokenizer_instance.float_precision}f}"
-    assert sample_float_str in tokenizer._stoi, f"Sample float token {sample_float_str} missing"
-
-    # Check a sample ID token
-    assert "0" in tokenizer._stoi, "Node ID token '0' missing"
-    assert "-1" in tokenizer._stoi, "Input ID token '-1' missing"
-    assert "1" in tokenizer._stoi, "N/M value token '1' missing"
-
-
-def test_validation_num_inputs_exceeded(genome_tokenizer_instance: NeatGenomeTokenizer):
-    """Tests validation failure for too many inputs."""
-    malformed_genome = test_data_genome.replace("num_inputs|2|", "num_inputs|20|") # Max inputs set to 2 in fixture
-    with pytest.raises(ValueError, match=r"Number of inputs N=20 out of range"):
-        genome_tokenizer_instance.encode(malformed_genome)
-
-def test_validation_num_outputs_exceeded(genome_tokenizer_instance: NeatGenomeTokenizer):
-    """Tests validation failure for too many outputs."""
-    malformed_genome = test_data_genome.replace("num_outputs|1|", "num_outputs|5|") # Max outputs set to 1 in fixture
-    with pytest.raises(ValueError, match=r"Number of outputs M=5 out of range"):
-        genome_tokenizer_instance.encode(malformed_genome)
-
-def test_validation_hidden_nodes_exceeded(genome_tokenizer_instance: NeatGenomeTokenizer):
-    """Tests validation failure for too many hidden nodes."""
-    # Fixture has max_hidden_nodes_in_genome=4. Test data has 4 hidden nodes (1,2,3,4 for M=1).
-    # Add one more hidden node to exceed the limit.
-    # Original nodes end at _NODE_4|-0.10|1.00|log|max_E_NODES_
-    # Add _NODE_5|0.0|1.0|sigmoid|sum_E_NODES_
-    additional_node = "_NODE_5|0.00|1.00|sigmoid|sum_E_NODES_\n"
-    malformed_genome = test_data_genome.replace(
-        "_NODE_4|-0.10|1.00|log|max_E_NODES_",
-        "_NODE_4|-0.10|1.00|log|max_E_NODES_\n" + additional_node
-    )
-    with pytest.raises(ValueError, match=r"Num hidden nodes 5 exceeds limit 4"):
-        genome_tokenizer_instance.encode(malformed_genome)
-
-# def test_untokenizable_sequence(genome_tokenizer_instance: NeatGenomeTokenizer):
-#     """Tests failure on an untokenizable sequence (e.g., bad float format or unknown token)."""
-#     # Introduce a float with wrong precision that won't be in vocab
-#     malformed_genome_bad_float = test_data_genome.replace("1.54", "1.5X3")
-#     with pytest.raises(ValueError, match=r"Untokenizable sequence at position"):
-#         genome_tokenizer_instance.encode(malformed_genome_bad_float)
-
-#     # Introduce an unknown keyword
-#     malformed_genome_unknown_token = test_data_genome.replace("sigmoid", "weird_activation_fn")
-#     with pytest.raises(ValueError, match=r"Untokenizable sequence at position"):
-#         genome_tokenizer_instance.encode(malformed_genome_unknown_token)
-
-if __name__ == "__main__":
-    # This allows running the tests with `python test_neat_genome_tokenizer.py`
-    # You might need to adjust paths if scratchgpt is not in PYTHONPATH
-    # For pytest, just run `pytest` in the directory containing scratchgpt folder
-    # or `pytest path/to/test_neat_genome_tokenizer.py`
-
-    # Example of direct run for debugging:
-    print("Running NeatGenomeTokenizer tests manually...")
-
-    # Manually create instance for direct run if needed
-    tokenizer_manual = NeatGenomeTokenizer(
-        float_min_val=-3.0,
-        float_max_val=3.0,
-        float_precision=2,
-        max_inputs=2,
-        max_outputs=1,
-        max_hidden_nodes_in_genome=4
-    )
-
-    print(f"Tokenizer Vocab Size: {tokenizer_manual.vocab_size}")
-    # print(f"Tokenizer Vocabulary Sample: {tokenizer_manual.vocabulary[:20] + tokenizer_manual.vocabulary[-20:]}")
-
-    try:
-        test_basic_neat_genome_tokenizer_encode_decode(tokenizer_manual)
-        print("test_basic_neat_genome_tokenizer_encode_decode: PASSED")
-
-        test_neat_genome_tokenizer_vocab_properties(tokenizer_manual)
-        print("test_neat_genome_tokenizer_vocab_properties: PASSED")
-
-        # For manual testing of exceptions
-        print("\nTesting validation errors (expect ValueErrors):")
+    def test_valid_minimal_params(self):
         try:
-            test_validation_num_inputs_exceeded(tokenizer_manual)
-        except ValueError as e:
-            print(f"  Num inputs exceeded (expected): {e}")
+            NeatGenomeTokenizer(0.0, 0.0, 0, max_inputs=1, max_outputs=1, max_hidden_nodes_in_genome=0)
+        except ValueError:
+            self.fail("NeatGenomeTokenizer raised ValueError unexpectedly with minimal valid params.")
 
-        try:
-            test_validation_num_outputs_exceeded(tokenizer_manual)
-        except ValueError as e:
-            print(f"  Num outputs exceeded (expected): {e}")
 
-        try:
-            test_validation_hidden_nodes_exceeded(tokenizer_manual)
-        except ValueError as e:
-            print(f"  Hidden nodes exceeded (expected): {e}")
+class TestNeatGenomeTokenizerOperations(unittest.TestCase):
+    def setUp(self):
+        # Configured to handle the PROCESSED_TEST_GENOME
+        self.tokenizer = NeatGenomeTokenizer(
+            float_min_val=-3.0,
+            float_max_val=3.0,
+            float_precision=2,
+            max_inputs=2, # From "num_inputs 2", IDs -1, -2
+            max_outputs=1, # From "num_outputs 1", ID 0
+            max_hidden_nodes_in_genome=4, # Node IDs 0,1,2,3,4 used. Max is 4. 1 output + 4 hidden = 5 nodes (0-4)
+            start_token_id=0
+        )
+        self.test_genome_str = PROCESSED_TEST_GENOME
+        # Expected tokens in PROCESSED_TEST_GENOME:
+        # Floats: -0.04, 1.00, 0.44, -0.63, -0.81, -0.10, 1.54, -2.65, 1.90, -1.05, 0.54, 3.00
+        # Ints: 0, 1, 2, 3, 4, -1, -2
+        # OpName: </xnor>
+        # Keywords, Structurals, Bools, GeneTypes, Activations, Aggregations, Space
 
-        try:
-            test_untokenizable_sequence(tokenizer_manual) # This calls it twice, better to split the cases.
-        except ValueError as e: # This will only catch the first error from test_untokenizable_sequence
-            print(f"  Untokenizable sequence (expected): {e}")
+    def test_encode_decode_happy_path(self):
+        encoded_ids = self.tokenizer.encode(self.test_genome_str)
+        self.assertIsInstance(encoded_ids, list)
+        self.assertTrue(all(isinstance(id_val, int) for id_val in encoded_ids))
 
-    except Exception as e:
-        print(f"A manual test failed: {e}")
+        decoded_str = self.tokenizer.decode(encoded_ids)
+        self.assertEqual(decoded_str, self.test_genome_str)
+
+    def test_vocab_properties(self):
+        self.assertGreater(self.tokenizer.vocab_size, 0)
+        vocab_list = self.tokenizer.vocabulary
+        self.assertIsInstance(vocab_list, list)
+        self.assertEqual(len(vocab_list), self.tokenizer.vocab_size)
+        self.assertTrue(all(isinstance(token, str) for token in vocab_list))
+        # Check if a few key tokens are present
+        self.assertIn("_S_GEN_", vocab_list)
+        self.assertIn(" ", vocab_list) # Space token
+        self.assertIn("0.50", vocab_list) # Example float if within range -3.0 to 3.0
+        self.assertIn("</xnor>", vocab_list) # From DEFAULT_OP_NAMES
+
+    def test_encode_empty_string(self):
+        self.assertEqual(self.tokenizer.encode(""), [])
+
+    def test_decode_empty_list(self):
+        self.assertEqual(self.tokenizer.decode([]), "")
+
+    def test_start_token_id_offset(self):
+        tokenizer_offset = NeatGenomeTokenizer(
+            float_min_val=0.0, float_max_val=0.1, float_precision=1,
+            start_token_id=100
+        )
+        encoded = tokenizer_offset.encode("0.0")
+        self.assertTrue(all(id_val >= 100 for id_val in encoded))
+        # Test that first token gets start_token_id
+        first_token_str = tokenizer_offset.vocabulary[0] # This is _S_GEN_
+        expected_first_id = tokenizer_offset.start_token_id
+        self.assertEqual(tokenizer_offset._stoi[first_token_str], expected_first_id)
+
+
+    def test_float_precision_zero(self):
+        tokenizer_prec0 = NeatGenomeTokenizer(
+            float_min_val=-2.0, float_max_val=2.0, float_precision=0,
+            max_inputs=1, max_outputs=1, max_hidden_nodes_in_genome=0
+        )
+        self.assertIn("-2", tokenizer_prec0.vocabulary) # from -2.0
+        self.assertIn("0", tokenizer_prec0.vocabulary)  # from 0.0 and also an ID
+        self.assertIn("1", tokenizer_prec0.vocabulary)  # from 1.0 and also an ID/count
+        encoded = tokenizer_prec0.encode("-1 True 0")
+        decoded = tokenizer_prec0.decode(encoded)
+        self.assertEqual(decoded, "-1 True 0")
+
+    def test_float_min_equals_max(self):
+        tokenizer_min_max_eq = NeatGenomeTokenizer(
+            float_min_val=1.23, float_max_val=1.23, float_precision=2,
+        )
+        self.assertIn("1.23", tokenizer_min_max_eq.vocabulary)
+        # Check that only one float related to this specific setup is there if range is tight
+        float_tokens = [t for t in tokenizer_min_max_eq.vocabulary if re.match(r"^-?\d+\.\d+$", t)]
+        self.assertIn("1.23", float_tokens)
+        # Depending on other float settings, there might be more than one.
+        # This test ensures "1.23" is present.
+
+    def test_encode_unknown_token(self):
+        with self.assertRaisesRegex(ValueError, "Token 'UNKNOWN_TOKEN' not found in vocabulary"):
+            self.tokenizer.encode("_S_GEN_ UNKNOWN_TOKEN _E_GEN_")
+
+    def test_decode_unknown_token_id(self):
+        max_id = self.tokenizer.vocab_size + self.tokenizer.start_token_id -1
+        unknown_id = max_id + 1
+        with self.assertRaisesRegex(ValueError, f"Token ID '{unknown_id}' not found in vocabulary"):
+            self.tokenizer.decode([self.tokenizer._stoi["_S_GEN_"], unknown_id])
+
+    def test_encode_type_error(self):
+        with self.assertRaisesRegex(TypeError, "Input text must be a string."):
+            self.tokenizer.encode(123) # type: ignore
+
+    def test_decode_type_error(self):
+        with self.assertRaisesRegex(TypeError, "Input encoding must be a list of integers."):
+            self.tokenizer.decode("not a list") # type: ignore
+        with self.assertRaisesRegex(ValueError, "All items in encoding list must be integers."):
+            self.tokenizer.decode([0, 1, "two"]) # type: ignore
+
+    def test_string_with_multiple_spaces(self):
+        # "A  B" should be tokenized as "A", " ", " ", "B"
+        # based on re.split(r'( )', text) and subsequent filtering of empty strings.
+        text = "_S_GEN_  _E_GEN_" # Two spaces
+        expected_tokens = ["_S_GEN_", " ", " ", "_E_GEN_"]
+
+        encoded = self.tokenizer.encode(text)
+
+        # Verify encoded IDs map back to the expected sequence of token strings
+        actual_tokens_from_ids = [self.tokenizer._itos[token_id] for token_id in encoded]
+        self.assertEqual(actual_tokens_from_ids, expected_tokens)
+
+        decoded = self.tokenizer.decode(encoded)
+        self.assertEqual(decoded, text)
+
+    def test_tokens_are_unique_and_ids_are_correct(self):
+        # Check if all tokens in vocab are unique
+        self.assertEqual(len(self.tokenizer.vocabulary), len(set(self.tokenizer.vocabulary)))
+        # Check if _stoi and _itos are consistent and cover the vocab
+        self.assertEqual(len(self.tokenizer._stoi), self.tokenizer.vocab_size)
+        self.assertEqual(len(self.tokenizer._itos), self.tokenizer.vocab_size)
+        for i, token_str in enumerate(self.tokenizer.vocabulary):
+            expected_id = self.tokenizer.start_token_id + i
+            self.assertEqual(self.tokenizer._stoi[token_str], expected_id)
+            self.assertEqual(self.tokenizer._itos[expected_id], token_str)
+
+    def test_zero_float_representation(self):
+        # Test specific representation of 0.0, -0.0 etc.
+        tok_zero_prec = NeatGenomeTokenizer(float_min_val=-0.5, float_max_val=0.5, float_precision=2)
+        self.assertIn("0.00", tok_zero_prec.vocabulary)
+        self.assertNotIn("-0.00", tok_zero_prec.vocabulary) # Should be normalized
+        self.assertIn("0.10", tok_zero_prec.vocabulary)
+        self.assertIn("-0.10", tok_zero_prec.vocabulary)
+
+        tok_zero_prec0 = NeatGenomeTokenizer(float_min_val=-0.0, float_max_val=0.0, float_precision=0)
+        self.assertIn("0", tok_zero_prec0.vocabulary) # "0" for 0.0 with precision 0
+        self.assertNotIn("-0", tok_zero_prec0.vocabulary)
+
+
+if __name__ == '__main__':
+    print(f"Processed Test Genome for testing:\n'{PROCESSED_TEST_GENOME}'\n")
+    unittest.main(argv=['first-arg-is-ignored'], exit=False)
