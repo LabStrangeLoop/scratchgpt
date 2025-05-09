@@ -25,7 +25,7 @@ from .model_io import (
 torch.manual_seed(1337)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-BATCH_SIZE = 32
+BATCH_SIZE = 784
 BLOCK_SIZE = 256
 MAX_EPOCHS = 50
 LEARNING_RATE = 3e-4

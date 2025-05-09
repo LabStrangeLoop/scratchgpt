@@ -41,12 +41,13 @@ def parse_args() -> argparse.Namespace:
         default=BLOCK_SIZE * 2,
         help="Number of tokens you want the model produce",
     )
+    parser.add_argument("-t", "--tokenizer", help="please!", required=True, type=str)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    tokenizer = get_tokenizer(args.experiment)
+    tokenizer = get_tokenizer(args.experiment, args.tokenizer)
 
     device = torch.device(args.device)
     best_model_path = get_best_model_weights_path(args.experiment)
