@@ -1,7 +1,7 @@
 import decimal
 import re
 
-from .base_tokenizer import Tokenizer
+from scratchgpt.tokenizer.base_tokenizer import Tokenizer
 
 # Global variable for Operation Names as per user clarification
 # These are example ops from the spec.
@@ -209,3 +209,20 @@ class NeatGenomeTokenizer(Tokenizer):
         except KeyError as e:
             # e.args[0] will contain the missing key (token_id)
             raise ValueError(f"Token ID '{e.args[0]}' not found in vocabulary during decode.") from e
+
+
+def main():
+  tokenizer = NeatGenomeTokenizer(
+            float_min_val=-2.0,
+            float_max_val=2.0,
+            float_precision=2,
+            max_inputs=2, # From "num_inputs 2", IDs -1, -2
+            max_outputs=1, # From "num_outputs 1", ID 0
+            max_hidden_nodes_in_genome=4, # Node IDs 0,1,2,3,4 used. Max is 4. 1 output + 4 hidden = 5 nodes (0-4)
+            start_token_id=0
+        )
+  print(f"{tokenizer.vocabulary=}")
+
+
+if __name__ == "__main__":
+    main()
