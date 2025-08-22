@@ -245,7 +245,7 @@ def run_epoch(
             average_loss.add(loss.item())
 
             mean, std = average_loss.value()
-            pbar.set_description(f"{stage.capitalize()} Loss mean - std: {mean:.4f} {std:.4f}")
+            pbar.set_description(f"📉 {stage.capitalize()} Loss mean: {mean:.4f}    std: {std:.4f}")
             pbar.update(1)
 
     pbar.close()
