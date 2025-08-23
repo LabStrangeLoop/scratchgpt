@@ -280,7 +280,7 @@ def main() -> None:
     latest_model_path = get_latest_model_weights_path(args.experiment)
 
     model = TransformerLanguageModel(NUM_HEADS, tokenizer.vocab_size, N_EMBED, BLOCK_SIZE, NUM_BLOCKS)
-    load_model(best_model_path, model, DEVICE)
+    model = load_model(best_model_path, model, DEVICE)
 
     print_model_complexity(model)
     optimizer = AdamW(model.parameters(), lr=LEARNING_RATE)
