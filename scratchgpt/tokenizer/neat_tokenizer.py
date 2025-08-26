@@ -1,11 +1,19 @@
 import decimal
 import re
 
-from scratchgpt.tokenizer.base_tokenizer import Tokenizer
+from tokenizer.base_tokenizer import Tokenizer
 
 # Global variable for Operation Names as per user clarification
 # These are example ops from the spec.
-DEFAULT_OP_NAMES: list[str] = ["</xor>", "</xnor>", "</a_nimp_b>", "</b_nimp_a>"]
+DEFAULT_OP_NAMES: list[str] = [
+    "</xor>",
+    "</xnor>",
+    "</a_nimp_b>",
+    "</b_nimp_a>",
+    "</single_pole_ff>",
+    "</lunar_lander>",
+]
+
 
 class NeatGenomeTokenizer(Tokenizer):
     """
@@ -13,14 +21,16 @@ class NeatGenomeTokenizer(Tokenizer):
     Converts NEAT genome strings into sequences of integer IDs and vice-versa.
     """
 
-    def __init__(self,
-                 float_min_val: float,
-                 float_max_val: float,
-                 float_precision: int,
-                 max_inputs: int = 10,
-                 max_outputs: int = 10,
-                 max_hidden_nodes_in_genome: int = 30,
-                 start_token_id: int = 0):
+    def __init__(
+        self,
+        float_min_val: float,
+        float_max_val: float,
+        float_precision: int,
+        max_inputs: int = 10,
+        max_outputs: int = 10,
+        max_hidden_nodes_in_genome: int = 60,
+        start_token_id: int = 0,
+    ):
         """
         Initializes the NEAT Genome Tokenizer.
 
@@ -33,7 +43,7 @@ class NeatGenomeTokenizer(Tokenizer):
             max_hidden_nodes_in_genome: Maximum number of hidden nodes (for generating hidden node ID tokens).
             start_token_id: The starting ID for the first token in the vocabulary.
         """
-        if not (0 <= float_precision <= 15): # Practical limit for precision
+        if not (0 <= float_precision <= 15):  # Practical limit for precision
             raise ValueError("float_precision must be between 0 and 15.")
         if float_min_val > float_max_val:
             raise ValueError("float_min_val cannot be greater than float_max_val.")
@@ -41,9 +51,10 @@ class NeatGenomeTokenizer(Tokenizer):
             raise ValueError("max_inputs must be positive.")
         if max_outputs <= 0:
             raise ValueError("max_outputs must be positive.")
-        if max_hidden_nodes_in_genome < 0: # Can be 0 if no hidden nodes allowed apart from outputs
-             raise ValueError("max_hidden_nodes_in_genome must be non-negative.")
-
+        if (
+            max_hidden_nodes_in_genome < 0
+        ):  # Can be 0 if no hidden nodes allowed apart from outputs
+            raise ValueError("max_hidden_nodes_in_genome must be non-negative.")
 
         self.float_min_val = float_min_val
         self.float_max_val = float_max_val
@@ -73,16 +84,27 @@ class NeatGenomeTokenizer(Tokenizer):
 
         # 1. Structural Markers
         structural_markers = [
-            "_S_GEN_", "_E_GEN_", "_S_CONF_", "_E_CONF_", "_S_NODES_",
-            "_E_NODES_", "_S_CONNS_", "_E_CONNS_", "_NODE_", "_CONN_"
+            "_S_GEN_",
+            "_E_GEN_",
+            "_S_CONF_",
+            "_E_CONF_",
+            "_S_NODES_",
+            "_E_NODES_",
+            "_S_CONNS_",
+            "_E_CONNS_",
+            "_NODE_",
+            "_CONN_",
         ]
         for token in structural_markers:
             self._add_token(token)
 
         # 2. Keywords
         keywords = [
-            "num_inputs", "num_outputs", "feed_forward",
-            "node_gene_type", "connection_gene_type"
+            "num_inputs",
+            "num_outputs",
+            "feed_forward",
+            "node_gene_type",
+            "connection_gene_type",
         ]
         for token in keywords:
             self._add_token(token)
@@ -99,7 +121,9 @@ class NeatGenomeTokenizer(Tokenizer):
             self._add_token(token)
 
         # 5. Activation Function Names
-        activations = list("abs clamped cube exp gauss hat identity inv log relu sigmoid sin softplus square tanh".split())
+        activations = list(
+            "abs clamped cube exp gauss hat identity inv log relu sigmoid sin softplus square tanh".split()
+        )
         for token in activations:
             self._add_token(token)
 
@@ -116,14 +140,24 @@ class NeatGenomeTokenizer(Tokenizer):
         # Context precision should be higher than target precision for intermediate calcs
         ctx = decimal.Context(prec=self.float_precision + 10)
 
-        scale_factor = ctx.power(10, self.float_precision) # Decimal(10) ** Decimal(self.float_precision)
+        scale_factor = ctx.power(
+            10, self.float_precision
+        )  # Decimal(10) ** Decimal(self.float_precision)
 
         # Determine the range of scaled integers
         # Smallest integer i such that (i / scale_factor) >= float_min_val
-        start_num_scaled = int((ctx.create_decimal_from_float(self.float_min_val) * scale_factor).to_integral_value(rounding=decimal.ROUND_CEILING))
+        start_num_scaled = int(
+            (
+                ctx.create_decimal_from_float(self.float_min_val) * scale_factor
+            ).to_integral_value(rounding=decimal.ROUND_CEILING)
+        )
 
         # Largest integer i such that (i / scale_factor) <= float_max_val
-        end_num_scaled = int((ctx.create_decimal_from_float(self.float_max_val) * scale_factor).to_integral_value(rounding=decimal.ROUND_FLOOR))
+        end_num_scaled = int(
+            (
+                ctx.create_decimal_from_float(self.float_max_val) * scale_factor
+            ).to_integral_value(rounding=decimal.ROUND_FLOOR)
+        )
 
         if start_num_scaled <= end_num_scaled:
             for i in range(start_num_scaled, end_num_scaled + 1):
@@ -131,7 +165,9 @@ class NeatGenomeTokenizer(Tokenizer):
 
                 # Normalize -0.0 to 0.0 for consistent string representation "0.00" vs "-0.00"
                 if val_decimal.is_zero() and val_decimal.is_signed():
-                    val_decimal = decimal.Decimal("0.0") # Use string to ensure it's treated as exact zero
+                    val_decimal = decimal.Decimal(
+                        "0.0"
+                    )  # Use string to ensure it's treated as exact zero
 
                 token_str = f"{val_decimal:.{self.float_precision}f}"
                 self._add_token(token_str)
@@ -145,7 +181,9 @@ class NeatGenomeTokenizer(Tokenizer):
         # Max ID for this category. If max_outputs=1, max_hidden=0, then max_id = 1+0-1 = 0. Range is 0..0.
         # The number of such nodes is max_outputs + max_hidden_nodes_in_genome.
         # IDs run from 0 to (count - 1).
-        upper_bound_output_hidden_id = self.max_outputs + self.max_hidden_nodes_in_genome
+        upper_bound_output_hidden_id = (
+            self.max_outputs + self.max_hidden_nodes_in_genome
+        )
         for i in range(upper_bound_output_hidden_id):
             self._add_token(str(i))
 
@@ -170,7 +208,7 @@ class NeatGenomeTokenizer(Tokenizer):
     @property
     def vocabulary(self) -> list[str]:
         """Return the learned vocabulary as a list of token strings."""
-        return list(self._vocab) # Return a copy
+        return list(self._vocab)  # Return a copy
 
     def encode(self, text: str) -> list[int]:
         """Convert a NEAT genome string into a sequence of token IDs."""
@@ -183,16 +221,18 @@ class NeatGenomeTokenizer(Tokenizer):
         # Example: "A B" -> ["A", " ", "B"]
         # Example: "A"   -> ["A"]
         # Example: " A " -> ["", " ", "A", " ", ""] -> filter empty parts
-        parts = re.split(r'( )', text)
+        parts = re.split(r"( )", text)
 
         token_ids: list[int] = []
         for part in parts:
-            if not part: # Filter out empty strings that can result from re.split
+            if not part:  # Filter out empty strings that can result from re.split
                 continue
 
             token_id = self._stoi.get(part)
             if token_id is None:
-                raise ValueError(f"Token '{part}' not found in vocabulary during encode.")
+                raise ValueError(
+                    f"Token '{part}' not found in vocabulary during encode."
+                )
             token_ids.append(token_id)
         return token_ids
 
@@ -208,20 +248,22 @@ class NeatGenomeTokenizer(Tokenizer):
             return "".join(self._itos[token_id] for token_id in encoding)
         except KeyError as e:
             # e.args[0] will contain the missing key (token_id)
-            raise ValueError(f"Token ID '{e.args[0]}' not found in vocabulary during decode.") from e
+            raise ValueError(
+                f"Token ID '{e.args[0]}' not found in vocabulary during decode."
+            ) from e
 
 
 def main():
-  tokenizer = NeatGenomeTokenizer(
-            float_min_val=-2.0,
-            float_max_val=2.0,
-            float_precision=2,
-            max_inputs=2, # From "num_inputs 2", IDs -1, -2
-            max_outputs=1, # From "num_outputs 1", ID 0
-            max_hidden_nodes_in_genome=4, # Node IDs 0,1,2,3,4 used. Max is 4. 1 output + 4 hidden = 5 nodes (0-4)
-            start_token_id=0
-        )
-  print(f"{tokenizer.vocabulary=}")
+    tokenizer = NeatGenomeTokenizer(
+        float_min_val=-2.0,
+        float_max_val=2.0,
+        float_precision=2,
+        max_inputs=2,  # From "num_inputs 2", IDs -1, -2
+        max_outputs=1,  # From "num_outputs 1", ID 0
+        max_hidden_nodes_in_genome=4,  # Node IDs 0,1,2,3,4 used. Max is 4. 1 output + 4 hidden = 5 nodes (0-4)
+        start_token_id=0,
+    )
+    print(f"{tokenizer.vocabulary=}")
 
 
 if __name__ == "__main__":
