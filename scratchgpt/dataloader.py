@@ -16,7 +16,6 @@ class TextProvider(ABC):
 
 
 class FileTextProvider(TextProvider):
-
     def __init__(self, file_path: str) -> None:
         if not os.path.exists(file_path):
             raise ValueError(f"File path {file_path} does not exist")
@@ -31,7 +30,6 @@ class FileTextProvider(TextProvider):
 
 
 class FolderTextProvider(TextProvider):
-
     def __init__(self, dir_path: str) -> None:
         if not os.path.exists(dir_path):
             raise ValueError(f"Directory path {dir_path} does not exist")
@@ -41,10 +39,10 @@ class FolderTextProvider(TextProvider):
 
         self._data = ""
         for root, _, files in os.walk(dir_path):
+            print(f"Loading data from {root}")
             for file_name in files:
                 if not file_name.startswith("."):
                     file_path = os.path.join(root, file_name)
-                    print(f"Loading data from {file_path}")
                     with open(file_path, "r", encoding="utf-8") as f:
                         self._data += f.read() + "\n"  # Concatenate with a
                         # newline between files, could be the place to add

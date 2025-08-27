@@ -15,6 +15,15 @@ repo is educational, so the aim is to keep the code as legible as possible.
 - Flexible tokenization using TikToken
 - Command-line interfaces for training and inference
 
+## Roadmap
+
+[x] Switch to uv
+[x] Make it easy to modify with a config file
+[] Make it into a package
+[] Create an easy to use interface
+[] Create or check tokenizer interface
+[] Apply SOTA optimizations
+
 ## Requirements
 
 - Python 3.12+

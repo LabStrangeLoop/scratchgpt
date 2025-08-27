@@ -2,7 +2,8 @@ import os
 import pickle
 
 import torch
-from torch import nn
+
+from scratchgpt.model.model import TransformerLanguageModel
 
 from .tokenizer.base_tokenizer import Tokenizer
 from .tokenizer.tiktoken import TiktokenWrapper
@@ -24,7 +25,7 @@ def get_tokenizer_path(exp_folder: str) -> str:
     return os.path.join(exp_folder, "tokenizer.pkl")
 
 
-def load_model(model_path: str, model: nn.Module, device: torch.device) -> nn.Module:
+def load_model(model_path: str, model: TransformerLanguageModel, device: torch.device) -> TransformerLanguageModel:
     model.to(device)
     if os.path.exists(model_path):
         try:

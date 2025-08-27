@@ -1,27 +1,33 @@
-[tool.poetry]
+[project]
 name = "scratchgpt"
-version = "0.1.0"
-description = ""
-authors = ["Aleksandr Yeganov <ayeganov@gmail.com>", "Dario Cazzani <dariocazzani@gmail.com"]
+version = "0.2.0"
+description = "Add your description here"
+authors = [
+  { name = "Aleksandr Yeganov", email = "ayeganov@gmail.com"},
+  { name = "Dario Cazzani", email ="dariocazzani@gmail.com" }
+]
 readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.3.2",
+    "ptflops>=0.7.5",
+    "pydantic-settings>=2.10.1",
+    "pydantic-yaml>=1.6.0",
+    "tiktoken>=0.11.0",
+    "torch>=2.8.0",
+    "tqdm>=4.67.1",
+    "types-tqdm>=4.67.0.20250809",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-torch = "^2.4"
-tqdm = "^4.66"
-types-tqdm = "^4.66"
-ptflops = "^0.7"
-numpy = "^2.1"
-tiktoken = "^0.7"
-
-[tool.poetry.group.dev.dependencies]
-pylint = "^3.0.3"
-pytest = "^8.3"
-bandit = "^1.7.7"
-mypy = "^1.8.0"
-pytest-cov = "^4.1.0"
-isort = "^5.13.2"
-black = "^24.2.0"
+[dependency-groups]
+dev = [
+    "bandit>=1.8.6",
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "mypy>=1.17.1",
+    "pylint>=3.3.8",
+    "pytest>=8.4.1",
+]
 
 [tool.isort]
 profile = "black"
@@ -56,10 +62,10 @@ asyncio_mode = "auto"
 python_version = "3.12"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry.scripts]
+[project.scripts]
 train = "scratchgpt.main:main"
 infer = "scratchgpt.infer:main"
 tiktoken = "scratchgpt.tokenizer.tiktoken:main"
