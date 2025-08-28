@@ -19,27 +19,29 @@ repo is educational, so the aim is to keep the code as legible as possible.
 
 [x] Switch to uv
 [x] Make it easy to modify with a config file
-[] Make it into a package
+[] Extract the loss calculation from the model
+[] Rename main to train
 [] Create an easy to use interface
 [] Create or check tokenizer interface
+[] Make it into a package
 [] Apply SOTA optimizations
 
 ## Requirements
 
 - Python 3.12+
-- Poetry for dependency management
+- `uv` for dependency management
 
 ## Installation
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/scratchgpt.git
+   git clone https://github.com/LabStrangeLoop/scratchgpt.git
    cd scratchgpt
    ```
 
-2. Install dependencies using Poetry:
+2. Install dependencies using uv:
    ```
-   poetry install
+   uv sync --all-groups
    ```
 
 ## Usage
@@ -49,7 +51,7 @@ repo is educational, so the aim is to keep the code as legible as possible.
 To train the model on your custom dataset:
 
 ```
-poetry run train -t <path_to_training_data> -e <experiment_folder>
+uv run train -t <path_to_training_data> -e <experiment_folder>
 ```
 
 - `-t, --train_source`: Path to the training data file or folder
@@ -61,7 +63,7 @@ poetry run train -t <path_to_training_data> -e <experiment_folder>
 To generate text using a trained model:
 
 ```
-poetry run infer -e <experiment_folder> [-d <device>] [-m <max_tokens>]
+uv run infer -e <experiment_folder> [-d <device>] [-m <max_tokens>]
 ```
 
 - `-e, --experiment`: Path to the folder containing the trained model
@@ -73,7 +75,7 @@ poetry run infer -e <experiment_folder> [-d <device>] [-m <max_tokens>]
 To explore the TikToken tokenizer:
 
 ```
-poetry run tiktoken
+uv run tiktoken
 ```
 
 ## Project Structure
@@ -87,20 +89,16 @@ poetry run tiktoken
 
 This project uses various development tools:
 
-- `black` for code formatting
-- `isort` for import sorting
-- `pylint` for linting
 - `mypy` for static type checking
+- `ruff` for formatting and standard adherence
 - `pytest` for testing
 
 Run the following commands to ensure code quality:
 
 ```
-poetry run black .
-poetry run isort .
-poetry run pylint scratchgpt
-poetry run mypy scratchgpt
-poetry run pytest
+uv run ruff --fix .
+uv run mypy .
+uv run pytest
 ```
 
 ## Contributing
