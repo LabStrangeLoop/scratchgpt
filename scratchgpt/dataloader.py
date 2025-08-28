@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 import os
+from abc import ABC, abstractmethod
 from typing import Literal, override
 
 import torch
@@ -21,7 +21,7 @@ class FileTextProvider(TextProvider):
             raise ValueError(f"File path {file_path} does not exist")
 
         self._data = ""
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             self._data = f.read()
 
     @override
@@ -43,7 +43,7 @@ class FolderTextProvider(TextProvider):
             for file_name in files:
                 if not file_name.startswith("."):
                     file_path = os.path.join(root, file_name)
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    with open(file_path, encoding="utf-8") as f:
                         self._data += f.read() + "\n"  # Concatenate with a
                         # newline between files, could be the place to add
                         # special tokens

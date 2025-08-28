@@ -19,7 +19,7 @@ class Meter(ABC):
 
 class AverageValueMeter(Meter):
     def __init__(self) -> None:
-        super(AverageValueMeter, self).__init__()
+        super().__init__()
         self.reset()
         self.val: float = 0.0
 

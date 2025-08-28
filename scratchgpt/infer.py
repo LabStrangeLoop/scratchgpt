@@ -2,8 +2,8 @@ import argparse
 import pathlib
 import sys
 
-from pydantic_yaml import parse_yaml_file_as
 import torch
+from pydantic_yaml import parse_yaml_file_as
 
 from scratchgpt.config import ScratchGPTConfig
 

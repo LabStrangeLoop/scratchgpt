@@ -1,8 +1,8 @@
 import math
 from typing import Any
 
-from ptflops import get_model_complexity_info
 import torch
+from ptflops import get_model_complexity_info
 from torch import Tensor, nn
 from torch.nn import functional as F
 
