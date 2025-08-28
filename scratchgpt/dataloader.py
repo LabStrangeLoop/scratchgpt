@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import os
+from pathlib import Path
 from typing import Literal, override
 
 import torch
@@ -11,13 +12,13 @@ from .tokenizer.base_tokenizer import Tokenizer
 
 class TextProvider(ABC):
     @abstractmethod
-    def get_text(self) -> str:
+    def get_text(self) -> Path:
         """This method fetches the text from the underlying storage"""
 
 
 class FileTextProvider(TextProvider):
-    def __init__(self, file_path: str) -> None:
-        if not os.path.exists(file_path):
+    def __init__(self, file_path: Path) -> None:
+        if not file_path.exists():
             raise ValueError(f"File path {file_path} does not exist")
 
         self._data = ""
@@ -30,21 +31,19 @@ class FileTextProvider(TextProvider):
 
 
 class FolderTextProvider(TextProvider):
-    def __init__(self, dir_path: str) -> None:
-        if not os.path.exists(dir_path):
+    def __init__(self, dir_path: Path) -> None:
+        if not dir_path.exists():
             raise ValueError(f"Directory path {dir_path} does not exist")
 
-        if not os.path.isdir(dir_path):
+        if not dir_path.is_dir():
             raise ValueError(f"Directory path {dir_path} is not a directory")
 
         self._data = ""
-        for root, _, files in os.walk(dir_path):
-            print(f"Loading data from {root}")
-            for file_name in files:
-                if not file_name.startswith("."):
-                    file_path = os.path.join(root, file_name)
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        self._data += f.read() + "\n"  # Concatenate with a
+        for file_path in dir_path.rglob("*"):  # Recursively find all files
+            if file_path.is_file() and not file_path.name.startswith("."):
+                print(f"Loading data from {file_path.parent}")
+                with open(file_path, "r", encoding="utf-8") as f:
+                    self._data += f.read() + "\n"  # Concatenate with a
                         # newline between files, could be the place to add
                         # special tokens
 
