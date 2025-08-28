@@ -39,7 +39,7 @@ class TiktokenWrapper(Tokenizer):
         """Return the learned vocabulary"""
         return list(self._get_cached_vocabulary())
 
-    @lru_cache(maxsize=1)
+    @lru_cache(maxsize=1)  # noqa: B019
     def _get_cached_vocabulary(self) -> tuple[str, ...]:
         """
         Cache and return the vocabulary as a tuple.

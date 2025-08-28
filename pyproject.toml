@@ -40,6 +40,11 @@ explicit_package_bases = true
 warn_unreachable = true
 warn_redundant_casts = true
 strict = true
+exclude = [".venv"]
+
+[[tool.mypy.overrides]]
+module = ["ptflops"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
@@ -58,6 +63,7 @@ select = [
   "PIE",    # flake8-pie
   "SIM",    # flake8-simplify
 ]
+ignore = ["N812", "N806"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py

@@ -61,7 +61,7 @@ class MultiHeadAttention(nn.Module):
         self._dropout = nn.Dropout(dropout_rate)
 
     def forward(self, context: Tensor) -> Tensor:
-        out = torch.cat([head(context) for head in self._heads], dim=-1)
+        out: Tensor = torch.cat([head(context) for head in self._heads], dim=-1)
         out = self._proj(out)
         out = self._dropout(out)
         return out
@@ -202,12 +202,11 @@ def print_model_complexity(model: TransformerLanguageModel, config: ScratchGPTCo
     flops, params = get_model_complexity_info(
         model,
         input_shape,
-        input_constructor=input_constructor,  # type: ignore
+        input_constructor=input_constructor,
         print_per_layer_stat=False,
         as_strings=False,
     )
 
     print(f" FLOPs per forward pass: {flops:,}")
-    print(f"GFLOPs per forward pass: {flops / 1e9:.2f}")
 
     print("=========================")

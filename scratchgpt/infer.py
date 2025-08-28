@@ -7,7 +7,7 @@ from pydantic_yaml import parse_yaml_file_as
 
 from scratchgpt.config import ScratchGPTConfig
 
-from .main import TransformerLanguageModel
+from .model.model import TransformerLanguageModel
 from .model_io import get_best_model_weights_path, get_tokenizer, load_model
 
 
