@@ -1,9 +1,10 @@
 import argparse
-import pathlib
 import sys
+from pathlib import Path
 
-from pydantic_yaml import parse_yaml_file_as
 import torch
+from pydantic_yaml import parse_yaml_file_as
+from rich.pretty import pprint as rpprint
 
 from scratchgpt.config import ScratchGPTConfig
 
@@ -28,7 +29,7 @@ def parse_args() -> argparse.Namespace:
         "--experiment",
         help="The path to the folder where to save experiment checkpoints",
         required=True,
-        type=pathlib.Path,
+        type=Path,
     )
     parser.add_argument(
         "-m",
@@ -42,9 +43,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    config_file = args.experiment / "scratch_gpt.yaml"
+    config_file: Path = args.experiment / "scratch_gpt.yaml"
     config = parse_yaml_file_as(ScratchGPTConfig, config_file)
-    print(f"Using config file {config_file}: {config.model_dump_json(indent=2)}")
+    print(f"Using config file {config_file}")
+    rpprint(config.model_dump(), indent_guides=True, expand_all=True)
+
     tokenizer = get_tokenizer(args.experiment)
 
     device = torch.device(args.device)
