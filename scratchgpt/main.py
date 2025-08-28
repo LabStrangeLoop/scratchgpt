@@ -1,10 +1,12 @@
 import argparse
 import os
 import sys
+from pathlib import Path
 from typing import Literal
 
 import torch
-from pydantic_yaml import to_yaml_file
+from pydantic_yaml import parse_yaml_file_as, to_yaml_file
+from rich.pretty import pprint as rpprint
 from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 from torch.types import Tensor
@@ -23,9 +25,7 @@ from .model_io import (
     save_tokenizer,
 )
 
-config = ScratchGPTConfig()
-
-torch.manual_seed(config.training.random_seed)
+DatasetType = tuple[Tensor, Tensor]
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,14 +38,14 @@ def parse_args() -> argparse.Namespace:
         "--train_source",
         help="The file you want to train on",
         required=True,
-        type=str,
+        type=Path,
     )
     parser.add_argument(
         "-e",
         "--experiment",
         help="The path to the folder where to save experiment checkpoints",
         required=True,
-        type=str,
+        type=Path,
     )
     parser.add_argument(
         "-d",
@@ -57,7 +57,18 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-DatasetType = tuple[Tensor, Tensor]
+def load_or_create_config(experiment_path: Path) -> ScratchGPTConfig:
+    """
+    Load config from experiment folder if it exists, otherwise create default.
+    """
+    config_path: Path = experiment_path / "scratch_gpt.yaml"
+
+    if config_path.exists():
+        print(f"Loading existing config from {config_path}")
+        return parse_yaml_file_as(ScratchGPTConfig, config_path)
+    else:
+        print("No existing config found, creating default config")
+        return ScratchGPTConfig()
 
 
 def run_epoch(
@@ -111,14 +122,19 @@ def run_epoch(
     return average_loss.value()
 
 
-def get_text_provider(path: str) -> TextProvider:
-    if os.path.isdir(path):
+def get_text_provider(path: Path) -> TextProvider:
+    if path.is_dir():
         return FolderTextProvider(path)
     return FileTextProvider(path)
 
 
 def main() -> None:
     args = parse_args()
+
+    config = load_or_create_config(args.experiment)
+
+    torch.manual_seed(config.training.random_seed)
+    print(f"Set random seed to: {config.training.random_seed}")
 
     device = torch.device(args.device)
     print(f"Using the device: {device}")
@@ -127,7 +143,7 @@ def main() -> None:
 
     tokenizer = get_tokenizer(args.experiment)
     config.architecture.vocab_size = tokenizer.vocab_size
-    print(config)
+    rpprint(config.model_dump(), indent_guides=True, expand_all=True)
 
     train_dataset = TextDataset(text_provider, tokenizer, config.architecture.block_size, "train", 0.9)
     val_dataset = TextDataset(text_provider, tokenizer, config.architecture.block_size, "validation", 0.1)
