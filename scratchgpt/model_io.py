@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import pickle
 
 import torch
@@ -13,19 +14,19 @@ class ModelLoadFailed(Exception):
     pass
 
 
-def get_best_model_weights_path(exp_folder: str) -> str:
-    return os.path.join(exp_folder, "best_model_weights.pth")
+def get_best_model_weights_path(exp_folder: Path) -> Path:
+    return exp_folder / "best_model_weights.pth"
 
 
-def get_latest_model_weights_path(exp_folder: str) -> str:
-    return os.path.join(exp_folder, "latest_model_weights.pth")
+def get_latest_model_weights_path(exp_folder: Path) -> Path:
+    return exp_folder / "latest_model_weights.pth"
 
 
-def get_tokenizer_path(exp_folder: str) -> str:
-    return os.path.join(exp_folder, "tokenizer.pkl")
+def get_tokenizer_path(exp_folder: Path) -> Path:
+    return exp_folder / "tokenizer.pkl"
 
 
-def load_model(model_path: str, model: TransformerLanguageModel, device: torch.device) -> TransformerLanguageModel:
+def load_model(model_path: Path, model: TransformerLanguageModel, device: torch.device) -> TransformerLanguageModel:
     model.to(device)
     if os.path.exists(model_path):
         try:
@@ -39,7 +40,7 @@ def load_model(model_path: str, model: TransformerLanguageModel, device: torch.d
     return model
 
 
-def get_tokenizer(exp_path: str) -> Tokenizer:
+def get_tokenizer(exp_path: Path) -> Tokenizer:
     tokenizer_path = get_tokenizer_path(exp_path)
     if os.path.exists(tokenizer_path):
         with open(tokenizer_path, "rb") as f:
@@ -49,7 +50,7 @@ def get_tokenizer(exp_path: str) -> Tokenizer:
     return tokenizer
 
 
-def save_tokenizer(exp_path: str, tokenizer: Tokenizer) -> None:
+def save_tokenizer(exp_path: Path, tokenizer: Tokenizer) -> None:
     tokenizer_path = get_tokenizer_path(exp_path)
     with open(tokenizer_path, "wb") as f:
         pickle.dump(tokenizer, f)
