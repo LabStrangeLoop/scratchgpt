@@ -4,7 +4,7 @@ from .base_tokenizer import Tokenizer
 
 
 def get_vocab(text: str) -> list[str]:
-    chars = sorted(list(set(text)))
+    chars = sorted(set(text))
     return chars
 
 
@@ -13,7 +13,7 @@ def str_to_int(chars: list[str]) -> dict[str, int]:
 
 
 def int_to_str(chars: list[str]) -> dict[int, str]:
-    return {idx: char for idx, char in enumerate(chars)}
+    return dict(enumerate(chars))
 
 
 class CharTokenizer(Tokenizer):
@@ -48,7 +48,7 @@ class CharTokenizer(Tokenizer):
 class Utf8Tokenizer(Tokenizer):
 
     def __init__(self) -> None:
-        self._vocabulary = list(range(0, 256))
+        self._vocabulary = list(range(256))
 
     @property
     @override

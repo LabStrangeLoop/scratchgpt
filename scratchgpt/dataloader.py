@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import os
 from pathlib import Path
 from typing import Literal, override
 
@@ -12,7 +11,7 @@ from .tokenizer.base_tokenizer import Tokenizer
 
 class TextProvider(ABC):
     @abstractmethod
-    def get_text(self) -> Path:
+    def get_text(self) -> str:
         """This method fetches the text from the underlying storage"""
 
 
@@ -22,7 +21,7 @@ class FileTextProvider(TextProvider):
             raise ValueError(f"File path {file_path} does not exist")
 
         self._data = ""
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             self._data = f.read()
 
     @override
@@ -40,12 +39,10 @@ class FolderTextProvider(TextProvider):
 
         self._data = ""
         for file_path in dir_path.rglob("*"):  # Recursively find all files
+            print(f"Loading data from {file_path}")
             if file_path.is_file() and not file_path.name.startswith("."):
-                print(f"Loading data from {file_path.parent}")
-                with open(file_path, "r", encoding="utf-8") as f:
-                    self._data += f.read() + "\n"  # Concatenate with a
-                        # newline between files, could be the place to add
-                        # special tokens
+                with open(file_path, encoding="utf-8") as f:
+                    self._data += f.read() + "\n"
 
     @override
     def get_text(self) -> str:

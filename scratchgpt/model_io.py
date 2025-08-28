@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 import pickle
+from pathlib import Path
 
 import torch
 
@@ -10,7 +10,7 @@ from .tokenizer.base_tokenizer import Tokenizer
 from .tokenizer.tiktoken import TiktokenWrapper
 
 
-class ModelLoadFailed(Exception):
+class ModelLoadFailedError(Exception):
     pass
 
 
@@ -33,8 +33,8 @@ def load_model(model_path: Path, model: TransformerLanguageModel, device: torch.
             print(f"Loading weights from: {model_path}")
             model_dict = torch.load(model_path, map_location=device)
             model.load_state_dict(model_dict)
-        except Exception:
-            raise ModelLoadFailed(model_path)
+        except Exception as error:
+            raise ModelLoadFailedError(model_path) from error
     else:
         print("No saved model, starting from scratch...gpt, lol!")
     return model

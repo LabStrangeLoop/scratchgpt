@@ -1,11 +1,11 @@
 import argparse
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Literal
 
 import torch
-from pydantic_yaml import to_yaml_file, parse_yaml_file_as
+from pydantic_yaml import parse_yaml_file_as, to_yaml_file
 from rich.pretty import pprint as rpprint
 from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
