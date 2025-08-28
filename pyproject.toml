@@ -63,12 +63,33 @@ asyncio_mode = "auto"
 python_version = "3.12"
 warn_unused_configs = true
 files = ["scratchgpt/"]
-ignore_missing_imports = true
+ignore_missing_imports = false
 check_untyped_defs = true
 explicit_package_bases = true
 warn_unreachable = true
 warn_redundant_casts = true
 strict = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "F",      # Pyflakes
+  "E",      # pycodestyle errors
+  "W",      # pycodestyle warnings
+  "I",      # isort
+  "N",      # pep8-naming
+  "UP",     # pyupgrade
+  "B",      # flake8-bugbear (catches common bugs)
+  "C4",     # flake8-comprehensions
+  "PIE",    # flake8-pie
+  "SIM",    # flake8-simplify
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
 
 [build-system]
 requires = ["hatchling"]
