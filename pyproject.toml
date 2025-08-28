@@ -61,6 +61,14 @@ asyncio_mode = "auto"
 
 [tool.mypy]
 python_version = "3.12"
+warn_unused_configs = true
+files = ["scratchgpt/"]
+ignore_missing_imports = true
+check_untyped_defs = true
+explicit_package_bases = true
+warn_unreachable = true
+warn_redundant_casts = true
+strict = true
 
 [build-system]
 requires = ["hatchling"]
