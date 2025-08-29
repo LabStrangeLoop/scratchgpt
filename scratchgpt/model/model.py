@@ -157,7 +157,7 @@ class TransformerLanguageModel(nn.Module):
         x = tok_emb + pos_emb  # B, T, C
         x = self._blocks(x)
         x = self._block_norm(x)
-        logits = self._lm_head(x)  # (B, T, vocab_size)
+        logits: Tensor = self._lm_head(x)  # (B, T, vocab_size)
         return logits
 
     def generate(self, context: Tensor, max_new_tokens: int) -> Tensor:

@@ -113,10 +113,10 @@ def run_epoch(
             logits = logits.view(B * T, C)
             targets = targets.view(B * T)
 
-            loss = F.cross_entropy(logits, targets)
+            loss: Tensor = F.cross_entropy(logits, targets)
 
             if is_train and optimizer is not None:
-                loss.backward()
+                loss.backward()  # type: ignore[no-untyped-call]
                 optimizer.step()
 
             average_loss.add(loss.item())
