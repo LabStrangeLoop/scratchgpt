@@ -21,8 +21,10 @@ class FileTextProvider(TextProvider):
             raise ValueError(f"File path {file_path} does not exist")
 
         self._data = ""
+        print(f"Loading data from {file_path}")
         with open(file_path) as f:
             self._data = f.read()
+        print("Data Loaded")
 
     @override
     def get_text(self) -> str:
@@ -38,11 +40,18 @@ class FolderTextProvider(TextProvider):
             raise ValueError(f"Directory path {dir_path} is not a directory")
 
         self._data = ""
-        for file_path in dir_path.rglob("*"):  # Recursively find all files
-            print(f"Loading data from {file_path}")
+        print(f"Loading data from {dir_path}")
+        total_read: int = 0
+        for idx, file_path in enumerate(dir_path.rglob("*")):
             if file_path.is_file() and not file_path.name.startswith("."):
                 with open(file_path, encoding="utf-8") as f:
                     self._data += f.read() + "\n"
+
+            if idx % 500 == 1:
+                total_read += 500
+                print(f"Read {total_read} files")
+
+        print("Data Loaded")
 
     @override
     def get_text(self) -> str:

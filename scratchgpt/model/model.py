@@ -148,7 +148,7 @@ class TransformerLanguageModel(nn.Module):
         self._lm_head = nn.Linear(arch.embedding_size, arch.vocab_size)
         self._device = device
 
-    def forward(self, context: Tensor, targets: Tensor | None = None) -> tuple[Tensor, Tensor]:
+    def forward(self, context: Tensor) -> Tensor:
         context = context.long()
         B, T = context.shape
 
@@ -157,22 +157,13 @@ class TransformerLanguageModel(nn.Module):
         x = tok_emb + pos_emb  # B, T, C
         x = self._blocks(x)
         x = self._block_norm(x)
-        logits = self._lm_head(x)  # (B, T, vocab_size)
-
-        if targets is None:
-            loss = torch.empty(0)
-        else:
-            B, T, C = logits.shape
-            logits = logits.view(B * T, C)
-            targets = targets.view(B * T)
-            loss = F.cross_entropy(logits, targets)
-
-        return logits, loss
+        logits: Tensor = self._lm_head(x)  # (B, T, vocab_size)
+        return logits
 
     def generate(self, context: Tensor, max_new_tokens: int) -> Tensor:
         for _ in range(max_new_tokens):
             cropped_context = context[:, -self._block_size :]
-            logits, _loss = self(cropped_context)
+            logits = self(cropped_context)
             logits = logits[:, -1, :]  # becomes (B, C)
             probs = F.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
@@ -208,5 +199,6 @@ def print_model_complexity(model: TransformerLanguageModel, config: ScratchGPTCo
     )
 
     print(f" FLOPs per forward pass: {flops:,}")
+    print(f" Params: {params}")
 
     print("=========================")
