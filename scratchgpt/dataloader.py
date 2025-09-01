@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Literal, override
+from typing import override
 
 import numpy as np
 import torch
@@ -9,8 +9,6 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from .tokenizer.base_tokenizer import Tokenizer
-
-DEFAULT_DTYPE = np.dtype(np.uint16)
 
 
 class TextProvider(ABC):
@@ -64,27 +62,11 @@ class TextDataset(Dataset[tuple[Tensor, Tensor]]):
         text_provider: TextProvider,
         tokenizer: Tokenizer,
         block_size: int,
-        split: Literal["train", "validation", "test"],
-        train_ratio: float = 0.8,
-        val_ratio: float = 0.1,
     ) -> None:
         self.tokenizer = tokenizer
         self.block_size = block_size
 
         self.data = torch.tensor(self.tokenizer.encode(text_provider.get_text()), dtype=torch.long)
-
-        total_size = len(self.data)
-        train_size = int(total_size * train_ratio)
-        val_size = int(total_size * val_ratio)
-
-        if split == "train":
-            self.data = self.data[:train_size]
-        elif split == "validation":
-            self.data = self.data[train_size : train_size + val_size]
-        elif split == "test":
-            self.data = self.data[train_size + val_size :]
-        else:
-            raise ValueError(f"Invalid split: {split}. Must be 'train', 'validation', or 'test'.")
 
     def __len__(self) -> int:
         return len(self.data) - self.block_size
@@ -100,7 +82,7 @@ class PretokenizedDataset(Dataset[tuple[Tensor, Tensor]]):
         self,
         token_file: Path,
         block_size: int,
-        dtype: np.dtype = DEFAULT_DTYPE,
+        dtype: np.dtype,
     ) -> None:
         super().__init__()
         self.block_size = block_size
