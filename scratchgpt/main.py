@@ -7,6 +7,7 @@ from typing import Literal
 import torch
 from pydantic_yaml import parse_yaml_file_as, to_yaml_file
 from rich.pretty import pprint as rpprint
+from torch.nn import functional as F
 from torch.optim.adamw import AdamW
 from torch.optim.optimizer import Optimizer
 from torch.types import Tensor
@@ -106,10 +107,16 @@ def run_epoch(
             if is_train and optimizer is not None:
                 optimizer.zero_grad(set_to_none=True)
 
-            logits, loss = model(batch, targets)
+            logits = model(batch)
+
+            B, T, C = logits.shape
+            logits = logits.view(B * T, C)
+            targets = targets.view(B * T)
+
+            loss: Tensor = F.cross_entropy(logits, targets)
 
             if is_train and optimizer is not None:
-                loss.backward()
+                loss.backward()  # type: ignore[no-untyped-call]
                 optimizer.step()
 
             average_loss.add(loss.item())
@@ -148,6 +155,7 @@ def main() -> None:
     train_dataset = TextDataset(text_provider, tokenizer, config.architecture.block_size, "train", 0.9)
     val_dataset = TextDataset(text_provider, tokenizer, config.architecture.block_size, "validation", 0.1)
 
+    print("Loading train and validation loaders")
     cpu_count = os.cpu_count() or 4
     train_dataloader = DataLoader(
         train_dataset,
@@ -164,6 +172,8 @@ def main() -> None:
         num_workers=int(cpu_count / 2),
         shuffle=False,
     )
+
+    print("Loaders initialized")
 
     best_model_path = get_best_model_weights_path(args.experiment)
     latest_model_path = get_latest_model_weights_path(args.experiment)
