@@ -41,8 +41,30 @@ class MockTokenizer(Tokenizer):
         raise NotImplementedError
 
 
+class NumberTokenizer(Tokenizer):
+    """A controlled tokenizer for testing with sequences of numbers."""
+
+    def __init__(self, vocab_size: int):
+        self._vocab_size = vocab_size
+
+    def encode(self, text: str) -> list[int]:
+        """Encodes a space-separated string of numbers into a list of ints."""
+        return [int(x) for x in text.split()]
+
+    def decode(self, encoding: list[int]) -> str:
+        raise NotImplementedError
+
+    @property
+    def vocab_size(self) -> int:
+        return self._vocab_size
+
+    @property
+    def vocabulary(self) -> list[str]:
+        raise NotImplementedError
+
+
 class TestTokenizerPreprocessor(unittest.TestCase):
-    def test_happy_case_tokenization(self):
+    def test_happy_case_tokenization(self) -> None:
         """Test standard tokenization with a simple string."""
         tokenizer = MockTokenizer()
         preprocessor = TokenizerPreprocessor(tokenizer)
@@ -56,7 +78,7 @@ class TestTokenizerPreprocessor(unittest.TestCase):
         expected = np.array([1, 2, 27, 3], dtype=preprocessor.dtype)
         np.testing.assert_array_equal(result, expected)
 
-    def test_dtype_selection(self):
+    def test_dtype_selection(self) -> None:
         """Ensure correct numpy dtype is chosen based on vocab size."""
         # uint8
         preprocessor_small = TokenizerPreprocessor(MockTokenizer(vocab_size=255))
@@ -70,7 +92,7 @@ class TestTokenizerPreprocessor(unittest.TestCase):
         preprocessor_large = TokenizerPreprocessor(MockTokenizer(vocab_size=65536))
         self.assertEqual(preprocessor_large.dtype, np.uint32)
 
-    def test_empty_input(self):
+    def test_empty_input(self) -> None:
         """Test that an empty source results in an empty sink."""
         preprocessor = TokenizerPreprocessor(MockTokenizer())
         source = io.StringIO("")
@@ -80,7 +102,7 @@ class TestTokenizerPreprocessor(unittest.TestCase):
 
         self.assertEqual(sink.getvalue(), b"")
 
-    def test_chunking_and_multibyte_chars(self):
+    def test_chunking_and_multibyte_chars(self) -> None:
         """Ensure correct processing with small chunks and unicode."""
         preprocessor = TokenizerPreprocessor(MockTokenizer())
         text = "a€b"  # '€' is a multi-byte character
@@ -96,7 +118,7 @@ class TestTokenizerPreprocessor(unittest.TestCase):
         np.testing.assert_array_equal(result, expected)
 
     @patch("scratchgpt.preprocess.tqdm")
-    def test_progress_bar_update(self, mock_tqdm):
+    def test_progress_bar_update(self, mock_tqdm: MagicMock) -> None:
         """Verify that the progress bar is updated."""
         mock_pbar = MagicMock()
         mock_tqdm.return_value.__enter__.return_value = mock_pbar
@@ -112,19 +134,19 @@ class TestTokenizerPreprocessor(unittest.TestCase):
 
 
 class TestFileAndFolderPreprocessors(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         """Create a temporary directory for test files."""
         self.test_dir = tempfile.TemporaryDirectory()
         self.test_path = Path(self.test_dir.name)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Clean up the temporary directory."""
         self.test_dir.cleanup()
 
     # --- File2FileTokenizerPreprocessor Tests ---
 
     @patch("scratchgpt.preprocess.tqdm")
-    def test_file2file_happy_case(self, mock_tqdm):
+    def test_file2file_happy_case(self, mock_tqdm: MagicMock) -> None:
         """Test successful preprocessing of a single file."""
         tokenizer = MockTokenizer()
         preprocessor = File2FileTokenizerPreprocessor(tokenizer)
@@ -140,14 +162,14 @@ class TestFileAndFolderPreprocessors(unittest.TestCase):
         expected = np.array([1, 27, 2, 27, 3], dtype=preprocessor._preprocessor.dtype)
         np.testing.assert_array_equal(result, expected)
 
-    def test_file2file_error_input_not_found(self):
+    def test_file2file_error_input_not_found(self) -> None:
         """Ensure error is raised if input file does not exist."""
         preprocessor = File2FileTokenizerPreprocessor(MockTokenizer())
         with self.assertRaises(ValueError):
             # The call to `is_file()` inside the preprocessor will fail
             preprocessor(self.test_path / "nonexistent.txt", self.test_path / "output.bin")
 
-    def test_file2file_error_output_exists(self):
+    def test_file2file_error_output_exists(self) -> None:
         """Ensure error is raised if output file already exists."""
         preprocessor = File2FileTokenizerPreprocessor(MockTokenizer())
         input_file = self.test_path / "input.txt"
@@ -160,7 +182,7 @@ class TestFileAndFolderPreprocessors(unittest.TestCase):
     # --- Folder2FileTokenizerPreprocessor Tests ---
 
     @patch("scratchgpt.preprocess.tqdm")
-    def test_folder2file_happy_case(self, mock_tqdm):
+    def test_folder2file_happy_case(self, mock_tqdm: MagicMock) -> None:
         """Test successful preprocessing of a directory."""
         preprocessor = Folder2FileTokenizerPreprocessor(MockTokenizer())
 
@@ -183,7 +205,7 @@ class TestFileAndFolderPreprocessors(unittest.TestCase):
         expected.sort()
         np.testing.assert_array_equal(result, expected)
 
-    def test_folder2file_error_input_is_file(self):
+    def test_folder2file_error_input_is_file(self) -> None:
         """Ensure error is raised if input path is a file."""
         preprocessor = Folder2FileTokenizerPreprocessor(MockTokenizer())
         input_file = self.test_path / "input.txt"
@@ -191,7 +213,7 @@ class TestFileAndFolderPreprocessors(unittest.TestCase):
         with self.assertRaises(ValueError):
             preprocessor(input_file, self.test_path / "output.bin")
 
-    def test_folder2file_empty_folder(self):
+    def test_folder2file_empty_folder(self) -> None:
         """Test that an empty folder produces an empty output file."""
         preprocessor = Folder2FileTokenizerPreprocessor(MockTokenizer())
         output_file = self.test_path / "output.bin"
@@ -201,12 +223,11 @@ class TestFileAndFolderPreprocessors(unittest.TestCase):
 
 
 class TestDatasetIntegration(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         """Create a temporary directory and a predictable tokenizer."""
         self.test_dir = tempfile.TemporaryDirectory()
         self.test_path = Path(self.test_dir.name)
-        self.tokenizer = MockTokenizer(vocab_size=500)
-        self.tokenizer.encode = lambda text: [int(x) for x in text.split()]
+        self.tokenizer = NumberTokenizer(vocab_size=500)
 
         # Common setup: create a preprocessed file with 100 tokens (0-99)
         self.block_size = 10
@@ -220,11 +241,11 @@ class TestDatasetIntegration(unittest.TestCase):
 
         self.dtype = np.dtype(np.uint16)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Clean up the temporary directory."""
         self.test_dir.cleanup()
 
-    def test_dataset_len_and_getitem(self):
+    def test_dataset_len_and_getitem(self) -> None:
         """Verify the full dataset's length and item retrieval."""
         dataset = PretokenizedDataset(self.token_file, self.block_size, dtype=self.dtype)
 
@@ -243,7 +264,7 @@ class TestDatasetIntegration(unittest.TestCase):
         self.assertEqual(block.dtype, torch.long)
         self.assertEqual(target.dtype, torch.long)
 
-    def test_integration_with_random_split(self):
+    def test_integration_with_random_split(self) -> None:
         """Verify the dataset works correctly with torch.utils.data.random_split."""
         from torch.utils.data import random_split
 
@@ -265,7 +286,7 @@ class TestDatasetIntegration(unittest.TestCase):
         self.assertEqual(target.shape, (self.block_size,))
         self.assertEqual(block.dtype, torch.long)
 
-    def test_dataset_len_when_data_smaller_than_block_size(self):
+    def test_dataset_len_when_data_smaller_than_block_size(self) -> None:
         """Test the edge case where token count is less than block_size."""
         token_file = self.test_path / "small_tokens.bin"
         preprocessor = File2FileTokenizerPreprocessor(self.tokenizer)

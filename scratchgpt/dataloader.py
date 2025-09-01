@@ -10,6 +10,8 @@ from tqdm import tqdm
 
 from .tokenizer.base_tokenizer import Tokenizer
 
+DEFAULT_DTYPE = np.dtype(np.uint16)
+
 
 class TextProvider(ABC):
     @abstractmethod
@@ -98,8 +100,7 @@ class PretokenizedDataset(Dataset[tuple[Tensor, Tensor]]):
         self,
         token_file: Path,
         block_size: int,
-        # Default is now an instance of the dtype class
-        dtype: np.dtype = np.dtype(np.uint16),
+        dtype: np.dtype = DEFAULT_DTYPE,
     ) -> None:
         super().__init__()
         self.block_size = block_size

@@ -1,11 +1,16 @@
 import io
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
+from numpy.typing import DTypeLike
 from tqdm import tqdm
 
 from .tokenizer.base_tokenizer import Tokenizer
+
+
+class SupportsUpdate(Protocol):
+    def update(self, n: int) -> Any: ...
 
 
 class Preprocessor(Protocol):
@@ -18,7 +23,7 @@ class Preprocessor(Protocol):
         source: io.TextIOBase,
         sink: io.BufferedIOBase,
         chunk_size: int,
-        pbar: tqdm | None = None,
+        pbar: SupportsUpdate | None = None,
     ) -> None:
         """
         Process the input text source and write the result to the binary sink.
@@ -32,11 +37,11 @@ class TokenizerPreprocessor(Preprocessor):
     to a binary stream, managing progress updates internally.
     """
 
-    def __init__(self, tokenizer: Tokenizer):
+    def __init__(self, tokenizer: Tokenizer) -> None:
         self.tokenizer = tokenizer
         vocab_size = self.tokenizer.vocab_size
         if vocab_size < 2**8:
-            self.dtype = np.uint8
+            self.dtype: DTypeLike = np.uint8
         elif vocab_size < 2**16:
             self.dtype = np.uint16
         elif vocab_size < 2**32:
@@ -50,7 +55,7 @@ class TokenizerPreprocessor(Preprocessor):
         source: io.TextIOBase,
         sink: io.BufferedIOBase,
         chunk_size: int = 10 * 1024 * 1024,
-        pbar: tqdm | None = None,
+        pbar: SupportsUpdate | None = None,
     ) -> None:
         """
         Reads from the source stream, tokenizes content in chunks, writes to the
@@ -69,7 +74,7 @@ class File2FileTokenizerPreprocessor:
     Orchestrates preprocessing for a single source file to a single destination file.
     """
 
-    def __init__(self, tokenizer: Tokenizer):
+    def __init__(self, tokenizer: Tokenizer) -> None:
         self._preprocessor = TokenizerPreprocessor(tokenizer)
 
     def __call__(self, input_path: Path, output_path: Path, chunk_size: int = 10 * 1024 * 1024) -> None:
@@ -95,7 +100,7 @@ class Folder2FileTokenizerPreprocessor:
     Orchestrates preprocessing for a directory of source files to a single destination file.
     """
 
-    def __init__(self, tokenizer: Tokenizer):
+    def __init__(self, tokenizer: Tokenizer) -> None:
         self._preprocessor = TokenizerPreprocessor(tokenizer)
 
     def __call__(self, input_path: Path, output_path: Path, chunk_size: int = 10 * 1024 * 1024) -> None:
