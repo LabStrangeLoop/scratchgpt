@@ -31,6 +31,17 @@ class Preprocessor(Protocol):
         """
 
 
+class FilePreprocessor(Protocol):
+    """
+    Preprocessor that deals specifically with file system io.
+    """
+
+    def __call__(self, input_path: Path, output_path: Path, chunk_size: int = 10 * 1024 * 1024) -> None:
+        """
+        Process input and output paths
+        """
+
+
 class TokenizerPreprocessor(Preprocessor):
     """
     Default pre-processor. Tokenizes a text stream and writes the output

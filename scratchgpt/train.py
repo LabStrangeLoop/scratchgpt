@@ -16,7 +16,7 @@ from torch.types import Tensor
 from torch.utils.data import DataLoader, Dataset, random_split
 from tqdm import tqdm
 
-from scratchgpt.preprocess import File2FileTokenizerPreprocessor, Folder2FileTokenizerPreprocessor
+from scratchgpt.preprocess import File2FileTokenizerPreprocessor, FilePreprocessor, Folder2FileTokenizerPreprocessor
 from scratchgpt.tokenizer.base_tokenizer import Tokenizer
 
 from .config import ScratchGPTConfig
@@ -211,7 +211,7 @@ def prepare_dataset(
 
     print(f"No cached data found. Preprocessing '{args.train_source}' now.")
     if args.train_source.is_dir():
-        preprocessor = Folder2FileTokenizerPreprocessor(tokenizer)
+        preprocessor: FilePreprocessor = Folder2FileTokenizerPreprocessor(tokenizer)
     else:
         preprocessor = File2FileTokenizerPreprocessor(tokenizer)
 
