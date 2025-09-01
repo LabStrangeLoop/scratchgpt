@@ -2,9 +2,11 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Literal, override
 
+import numpy as np
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
+from tqdm import tqdm
 
 from .tokenizer.base_tokenizer import Tokenizer
 
@@ -40,16 +42,12 @@ class FolderTextProvider(TextProvider):
             raise ValueError(f"Directory path {dir_path} is not a directory")
 
         self._data = ""
+        file_paths = list(dir_path.rglob("*"))
         print(f"Loading data from {dir_path}")
-        total_read: int = 0
-        for idx, file_path in enumerate(dir_path.rglob("*")):
+        for file_path in tqdm(file_paths, desc="Reading data files", unit="file"):
             if file_path.is_file() and not file_path.name.startswith("."):
                 with open(file_path, encoding="utf-8") as f:
                     self._data += f.read() + "\n"
-
-            if idx % 500 == 1:
-                total_read += 500
-                print(f"Read {total_read} files")
 
         print("Data Loaded")
 
@@ -93,3 +91,27 @@ class TextDataset(Dataset[tuple[Tensor, Tensor]]):
         block = self.data[idx : idx + self.block_size]
         target = self.data[idx + 1 : idx + self.block_size + 1]
         return block, target
+
+
+class PretokenizedDataset(Dataset[tuple[Tensor, Tensor]]):
+    def __init__(
+        self,
+        token_file: Path,
+        block_size: int,
+        # Default is now an instance of the dtype class
+        dtype: np.dtype = np.dtype(np.uint16),
+    ) -> None:
+        super().__init__()
+        self.block_size = block_size
+
+        all_tokens = np.memmap(token_file, dtype=dtype, mode="c")
+        self.data = torch.from_numpy(all_tokens)
+
+    def __len__(self) -> int:
+        return max(0, len(self.data) - self.block_size)
+
+    def __getitem__(self, idx: int) -> tuple[Tensor, Tensor]:
+        block = self.data[idx : idx + self.block_size]
+        target = self.data[idx + 1 : idx + self.block_size + 1]
+
+        return block.long(), target.long()
