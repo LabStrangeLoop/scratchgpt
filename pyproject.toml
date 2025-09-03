@@ -1,6 +1,6 @@
 [project]
 name = "scratchgpt"
-version = "0.2.0"
+version = "0.3.0"
 description = "Add your description here"
 authors = [
   { name = "Aleksandr Yeganov", email = "ayeganov@gmail.com"},
@@ -49,7 +49,7 @@ strict = true
 exclude = [".venv"]
 
 [[tool.mypy.overrides]]
-module = ["ptflops", "tokenizers.*"]
+module = ["ptflops", "tokenizers.*", "huggingface_hub.*"]
 ignore_missing_imports = true
 
 [tool.ruff]
