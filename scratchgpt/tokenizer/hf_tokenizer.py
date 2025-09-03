@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Self, override
+from typing import Self, cast, override
 
 from huggingface_hub import hf_hub_download
 from tokenizers import Tokenizer as HFTokenizer
@@ -20,16 +20,16 @@ class HuggingFaceTokenizer(SerializableTokenizer):
 
     @override
     def encode(self, text: str) -> list[int]:
-        return self._tokenizer.encode(text).ids
+        return cast(list[int], self._tokenizer.encode(text).ids)
 
     @override
     def decode(self, encoding: list[int]) -> str:
-        return self._tokenizer.decode(encoding)
+        return cast(str, self._tokenizer.decode(encoding))
 
     @property
     @override
     def vocab_size(self) -> int:
-        return self._tokenizer.get_vocab_size()
+        return cast(int, self._tokenizer.get_vocab_size())
 
     @property
     @override

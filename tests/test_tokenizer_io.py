@@ -3,7 +3,7 @@ import shutil
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -35,7 +35,7 @@ def temp_experiment_dir(tmp_path: Path) -> Generator[Path, Any, Any]:
 
 
 class TestCharTokenizerIO:
-    def test_save_and_load_happy_path(self, temp_experiment_dir: Path):
+    def test_save_and_load_happy_path(self, temp_experiment_dir: Path) -> None:
         """Tests standard saving and loading of a CharTokenizer."""
         original_text = "hello world"
         original_tokenizer = CharTokenizer(text=original_text)
@@ -47,7 +47,7 @@ class TestCharTokenizerIO:
         assert loaded_tokenizer.vocabulary == original_tokenizer.vocabulary
         assert loaded_tokenizer.decode(loaded_tokenizer.encode("hello")) == "hello"
 
-    def test_save_and_load_edge_cases(self, temp_experiment_dir: Path):
+    def test_save_and_load_edge_cases(self, temp_experiment_dir: Path) -> None:
         """Tests edge cases like empty and unicode characters."""
         # Empty text
         empty_tokenizer = CharTokenizer(text="")
@@ -65,7 +65,7 @@ class TestCharTokenizerIO:
         assert isinstance(loaded_unicode, CharTokenizer)
         assert sorted(loaded_unicode.vocabulary) == sorted(set(unicode_text))
 
-    def test_load_error_missing_vocab_file(self, temp_experiment_dir: Path):
+    def test_load_error_missing_vocab_file(self, temp_experiment_dir: Path) -> None:
         """Tests that loading fails if vocab.json is missing."""
         tokenizer_dir = temp_experiment_dir / "tokenizer"
         tokenizer_dir.mkdir()
@@ -96,7 +96,7 @@ class TestHuggingFaceTokenizerIO:
         hf_tokenizer.train_from_iterator(["This is a test sentence for gpt2 tokenizer"], trainer=trainer)
         return hf_tokenizer
 
-    def test_save_and_load_happy_path(self, temp_experiment_dir: Path, gpt2_hf_tokenizer: HFTokenizer):
+    def test_save_and_load_happy_path(self, temp_experiment_dir: Path, gpt2_hf_tokenizer: HFTokenizer) -> None:
         """Tests standard saving and loading of a HuggingFaceTokenizer."""
         original_tokenizer = HuggingFaceTokenizer(tokenizer=gpt2_hf_tokenizer)
 
@@ -108,7 +108,7 @@ class TestHuggingFaceTokenizerIO:
         test_text = "This is a test"
         assert loaded_tokenizer.decode(loaded_tokenizer.encode(test_text)) == test_text
 
-    def test_load_error_missing_tokenizer_json(self, temp_experiment_dir: Path):
+    def test_load_error_missing_tokenizer_json(self, temp_experiment_dir: Path) -> None:
         """Tests that loading fails if tokenizer.json is missing."""
         tokenizer_dir = temp_experiment_dir / "tokenizer"
         tokenizer_dir.mkdir()
@@ -120,7 +120,9 @@ class TestHuggingFaceTokenizerIO:
             get_tokenizer(temp_experiment_dir)
 
     @patch("scratchgpt.tokenizer.hf_tokenizer.hf_hub_download")
-    def test_from_hub_mocked(self, mock_hub_download, temp_experiment_dir: Path, gpt2_hf_tokenizer: HFTokenizer):
+    def test_from_hub_mocked(
+        self, mock_hub_download: MagicMock, temp_experiment_dir: Path, gpt2_hf_tokenizer: HFTokenizer
+    ) -> None:
         """Tests loading from hub is correctly mocked."""
         # Save a temporary tokenizer file to simulate downloading
         local_path = temp_experiment_dir / "mock_tokenizer.json"
@@ -138,19 +140,19 @@ class TestHuggingFaceTokenizerIO:
 
 
 class TestGenericIO:
-    def test_get_tokenizer_default_fallback(self, temp_experiment_dir: Path):
+    def test_get_tokenizer_default_fallback(self, temp_experiment_dir: Path) -> None:
         """Tests that get_tokenizer falls back to Tiktoken if no tokenizer is saved."""
         tokenizer = get_tokenizer(temp_experiment_dir)
         assert isinstance(tokenizer, TiktokenWrapper)
 
-    def test_save_unserializable_tokenizer(self, temp_experiment_dir: Path):
+    def test_save_unserializable_tokenizer(self, temp_experiment_dir: Path) -> None:
         """Tests that saving a non-serializable tokenizer does nothing gracefully."""
         tokenizer = TiktokenWrapper()
         save_tokenizer(temp_experiment_dir, tokenizer)
         # The main assertion is that no directory is created and no error is raised
         assert not (temp_experiment_dir / "tokenizer").exists()
 
-    def test_load_error_missing_config_key(self, temp_experiment_dir: Path):
+    def test_load_error_missing_config_key(self, temp_experiment_dir: Path) -> None:
         """Tests failure when tokenizer_type key is missing from config."""
         tokenizer_dir = temp_experiment_dir / "tokenizer"
         tokenizer_dir.mkdir()
@@ -161,7 +163,7 @@ class TestGenericIO:
         with pytest.raises(ValueError, match="Tokenizer config is missing 'tokenizer_type' field."):
             get_tokenizer(temp_experiment_dir)
 
-    def test_load_error_unknown_tokenizer_type(self, temp_experiment_dir: Path):
+    def test_load_error_unknown_tokenizer_type(self, temp_experiment_dir: Path) -> None:
         """Tests failure when tokenizer_type is not in the registry."""
         tokenizer_dir = temp_experiment_dir / "tokenizer"
         tokenizer_dir.mkdir()
