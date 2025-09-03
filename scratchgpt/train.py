@@ -178,7 +178,9 @@ def get_dtype_for_vocab_size(vocab_size: int) -> np.dtype:
 
 
 def prepare_dataset(
-    args: argparse.Namespace, tokenizer: Tokenizer, config: ScratchGPTConfig
+    args: argparse.Namespace,
+    tokenizer: Tokenizer,
+    config: ScratchGPTConfig,
 ) -> Dataset[tuple[Tensor, Tensor]]:
     """
     Prepare the dataset for training.
