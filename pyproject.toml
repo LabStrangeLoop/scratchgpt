@@ -28,7 +28,6 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
 
 [tool.mypy]
 python_version = "3.12"
