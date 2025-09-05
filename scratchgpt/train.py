@@ -73,20 +73,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
     )
     parser.add_argument(
-        "-d",
-        "--device",
-        help="What hardware you want to run the model on",
-        default="cuda",
-        choices=["cuda", "cpu"],
-    )
-    parser.add_argument(
-        "-s",
-        "--splits",
-        type=parse_splits,
-        default="0.9;0.1;0.0",
-        help="Train, validation, and test split ratios, semicolon-separated (e.g., '0.9;0.1;0.0')",
-    )
-    parser.add_argument(
         "--dtype",
         type=str,
         default=None,
@@ -238,7 +224,7 @@ def main() -> None:
     torch.manual_seed(config.training.random_seed)
     print(f"Set random seed to: {config.training.random_seed}")
 
-    device = torch.device(args.device)
+    device = torch.device(config.training.device)
     print(f"Using the device: {device}")
 
     tokenizer = get_tokenizer(args.experiment)
@@ -246,10 +232,10 @@ def main() -> None:
     rpprint(config.model_dump(), indent_guides=True, expand_all=True)
 
     full_dataset = prepare_dataset(args, tokenizer, config)
-    print(f"Splitting dataset into train/validation/test with ratios: {args.splits}")
+    print(f"Splitting dataset into train/validation/test with ratios: {config.training.splits}")
     train_dataset, val_dataset, test_dataset = random_split(
         dataset=full_dataset,
-        lengths=args.splits,
+        lengths=config.training.splits,
         generator=torch.Generator().manual_seed(config.training.random_seed),
     )
     print(f"Train dataset size: {len(train_dataset)}")

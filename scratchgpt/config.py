@@ -1,10 +1,27 @@
-from pydantic import Field
+import math
+from typing import Annotated, Literal
+
+from pydantic import AfterValidator, Field
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+
+def ensure_split_is_valid(v: tuple[float, float, float]) -> tuple[float, float, float]:
+    """
+    Validates the data split contains only 3 values and they add to 1.0
+    """
+    splits_sum = sum(v)
+    is_valid_split = math.isclose(splits_sum, 1.0)
+    if not is_valid_split:
+        raise ValueError("Invalid data 'split'")
+    return v
+
+
+SplitType = Annotated[tuple[float, float, float], AfterValidator(ensure_split_is_valid)]
 
 
 class ScratchGPTArchitecture(BaseSettings):
@@ -35,6 +52,8 @@ class ScratchGPTTraining(BaseSettings):
     batch_size: int = 32
     dropout_rate: float = 0.2
     random_seed: int = 1337
+    device: Literal["cuda", "cpu"] = "cuda"
+    splits: SplitType = (0.8, 0.1, 0.1)
 
     model_config = SettingsConfigDict(
         env_prefix="TRAINING_",

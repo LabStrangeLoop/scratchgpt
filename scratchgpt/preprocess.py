@@ -80,7 +80,7 @@ class TokenizerPreprocessor(Preprocessor):
                 pbar.update(len(chunk.encode("utf-8", errors="ignore")))
 
 
-class File2FileTokenizerPreprocessor:
+class File2FileTokenizerPreprocessor(FilePreprocessor):
     """
     Orchestrates preprocessing for a single source file to a single destination file.
     """
@@ -106,7 +106,7 @@ class File2FileTokenizerPreprocessor:
         print(f"Successfully preprocessed '{input_path}' to '{output_path}'")
 
 
-class Folder2FileTokenizerPreprocessor:
+class Folder2FileTokenizerPreprocessor(FilePreprocessor):
     """
     Orchestrates preprocessing for a directory of source files to a single destination file.
     """
