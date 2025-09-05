@@ -1,7 +1,7 @@
-name: Lint
-on: [push, pull_request]
+name: Tests
+on: [pull_request]
 jobs:
-  lint:
+  unit_tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,5 +12,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --group dev --extra hf-tokenizers
-      - run: uv run ruff check .
-      - run: uv run mypy .
+      - run: uv run pytest tests

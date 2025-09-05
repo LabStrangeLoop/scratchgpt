@@ -31,6 +31,17 @@ class Preprocessor(Protocol):
         """
 
 
+class FilePreprocessor(Protocol):
+    """
+    Preprocessor that deals specifically with file system io.
+    """
+
+    def __call__(self, input_path: Path, output_path: Path, chunk_size: int = 10 * 1024 * 1024) -> None:
+        """
+        Process input and output paths
+        """
+
+
 class TokenizerPreprocessor(Preprocessor):
     """
     Default pre-processor. Tokenizes a text stream and writes the output
@@ -69,7 +80,7 @@ class TokenizerPreprocessor(Preprocessor):
                 pbar.update(len(chunk.encode("utf-8", errors="ignore")))
 
 
-class File2FileTokenizerPreprocessor:
+class File2FileTokenizerPreprocessor(FilePreprocessor):
     """
     Orchestrates preprocessing for a single source file to a single destination file.
     """
@@ -95,7 +106,7 @@ class File2FileTokenizerPreprocessor:
         print(f"Successfully preprocessed '{input_path}' to '{output_path}'")
 
 
-class Folder2FileTokenizerPreprocessor:
+class Folder2FileTokenizerPreprocessor(FilePreprocessor):
     """
     Orchestrates preprocessing for a directory of source files to a single destination file.
     """
