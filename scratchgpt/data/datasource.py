@@ -2,8 +2,6 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from tqdm.auto import tqdm
-
 
 @runtime_checkable
 class DataSource(Protocol):
@@ -19,7 +17,16 @@ class DataSource(Protocol):
         ...
 
 
-class FileDataSource(DataSource):
+@runtime_checkable
+class ByteSizableDataSource(DataSource, Protocol):
+    """An optional extension for DataSources that can report their total size in bytes."""
+
+    def total_bytes(self) -> int:
+        """Returns the total size of the data source in bytes."""
+        ...
+
+
+class FileDataSource(ByteSizableDataSource):
     """Yields the entire content of a single text file as one sample."""
 
     def __init__(self, file_path: Path):
@@ -28,15 +35,17 @@ class FileDataSource(DataSource):
         self._file_path = file_path
 
     def __len__(self) -> int:
-        """Returns the number of samples (always 1 for this class)."""
         return 1
 
     def __iter__(self) -> Iterator[str]:
         with open(self._file_path, encoding="utf-8", errors="ignore") as f:
             yield f.read()
 
+    def total_bytes(self) -> int:
+        return self._file_path.stat().st_size
 
-class FolderDataSource(DataSource):
+
+class FolderDataSource(ByteSizableDataSource):
     """Iterates through a directory and yields the content of each file."""
 
     def __init__(self, folder_path: Path):
@@ -47,16 +56,18 @@ class FolderDataSource(DataSource):
         print(f"✅ Found {len(self._file_paths)} files to process in {folder_path}.")
 
     def __len__(self) -> int:
-        """Returns the total number of files found."""
         return len(self._file_paths)
 
     def __iter__(self) -> Iterator[str]:
-        for file_path in tqdm(self._file_paths, desc="Reading source files"):
+        for file_path in self._file_paths:
             with open(file_path, encoding="utf-8", errors="ignore") as f:
                 yield f.read()
 
+    def total_bytes(self) -> int:
+        return sum(p.stat().st_size for p in self._file_paths)
 
-class LineByLineFileDataSource(DataSource):
+
+class LineByLineFileDataSource(ByteSizableDataSource):
     """Reads a text file and yields each line as a separate sample."""
 
     def __init__(self, file_path: Path):
@@ -69,9 +80,11 @@ class LineByLineFileDataSource(DataSource):
             self._line_count = sum(1 for _ in f)
 
     def __len__(self) -> int:
-        """Returns the total number of lines in the file."""
         return self._line_count
 
     def __iter__(self) -> Iterator[str]:
         with open(self._file_path, encoding="utf-8", errors="ignore") as f:
             yield from f
+
+    def total_bytes(self) -> int:
+        return self._file_path.stat().st_size

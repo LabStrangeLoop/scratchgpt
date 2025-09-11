@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from scratchgpt.config import ScratchGPTTraining
-from scratchgpt.data.datasource import DataSource
+from scratchgpt.data.datasource import ByteSizableDataSource, DataSource
 from scratchgpt.dataloader import PretokenizedDataset
 from scratchgpt.metering import AverageValueMeter
 from scratchgpt.model.model import TransformerLanguageModel
@@ -53,10 +53,25 @@ class Trainer:
         dtype: np.dtype,
     ) -> None:
         """Iterates through a DataSource, tokenizes it, and saves to a binary file."""
-        with open(output_path, "wb") as f:
+        total_size = None
+        unit = "samples"
+        # Check if we can provide a more detailed byte-level progress bar
+        if isinstance(data_source, ByteSizableDataSource):
+            total_size = data_source.total_bytes()
+            unit = "B"
+
+        with (
+            open(output_path, "wb") as f,
+            tqdm(total=total_size, unit=unit, unit_scale=True, desc="Tokenizing") as pbar,
+        ):
             for text_sample in data_source:
                 tokens = tokenizer.encode(text_sample)
                 f.write(np.array(tokens, dtype=dtype).tobytes())
+
+                if total_size:
+                    pbar.update(len(text_sample.encode("utf-8", errors="ignore")))
+                else:
+                    pbar.update(1)
 
     def _get_dataloader(self, data_source: DataSource, tokenizer: Tokenizer, cache_file: Path) -> DataLoader:
         """Handles DataLoader creation, using a pre-tokenized cache if it exists."""
