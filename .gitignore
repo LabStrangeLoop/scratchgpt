@@ -1,4 +1,4 @@
-data/
+./data/
 karpathy*
 __pycache__
 *.pyc

@@ -120,7 +120,6 @@ class TransformerLanguageModel(nn.Module):
     def __init__(
         self,
         config: ScratchGPTConfig,
-        device: torch.device,
     ) -> None:
         super().__init__()
         arch = config.architecture
@@ -146,7 +145,7 @@ class TransformerLanguageModel(nn.Module):
         )
         self._block_norm = nn.LayerNorm(arch.embedding_size)
         self._lm_head = nn.Linear(arch.embedding_size, arch.vocab_size)
-        self._device = device
+        self._device = training.device
 
     def forward(self, context: Tensor) -> Tensor:
         context = context.long()

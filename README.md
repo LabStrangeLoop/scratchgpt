@@ -4,8 +4,7 @@
 
 ScratchGPT is a Python project that implements a small-scale transformer-based
 language model from scratch. It provides functionality for training the model
-on custom datasets and generating text based on prompts. The purpose of this
-repo is educational, so the aim is to keep the code as legible as possible.
+on custom datasets and generating text based on prompts.
 
 ## Features
 
