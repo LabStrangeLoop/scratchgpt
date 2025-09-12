@@ -19,7 +19,6 @@ dependencies = [
     "ptflops>=0.7.5",
     "pydantic-settings>=2.10.1",
     "pydantic-yaml>=1.6.0",
-    "tiktoken>=0.11.0",
     "torch>=2.8.0",
     "tqdm>=4.67.1",
     "types-tqdm>=4.67.0.20250809",
@@ -93,4 +92,3 @@ build-backend = "hatchling.build"
 [project.scripts]
 train = "scratchgpt.train:main"
 infer = "scratchgpt.infer:main"
-tiktoken = "scratchgpt.tokenizer.tiktoken:main"
