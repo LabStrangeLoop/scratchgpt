@@ -145,14 +145,13 @@ class TransformerLanguageModel(nn.Module):
         )
         self._block_norm = nn.LayerNorm(arch.embedding_size)
         self._lm_head = nn.Linear(arch.embedding_size, arch.vocab_size)
-        self._device = training.device
 
     def forward(self, context: Tensor) -> Tensor:
         context = context.long()
         B, T = context.shape
 
         tok_emb = self._token_embedding_table(context)  # B, T, C
-        pos_emb = self._position_embedding_table(torch.arange(T, device=self._device))  # (T, C)
+        pos_emb = self._position_embedding_table(torch.arange(T, device=context.device))  # (T, C)
         x = tok_emb + pos_emb  # B, T, C
         x = self._blocks(x)
         x = self._block_norm(x)

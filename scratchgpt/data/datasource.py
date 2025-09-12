@@ -61,7 +61,7 @@ class FolderDataSource(ByteSizableDataSource):
     def __iter__(self) -> Iterator[str]:
         for file_path in self._file_paths:
             with open(file_path, encoding="utf-8", errors="ignore") as f:
-                yield f.read()
+                yield from f
 
     def total_bytes(self) -> int:
         return sum(p.stat().st_size for p in self._file_paths)

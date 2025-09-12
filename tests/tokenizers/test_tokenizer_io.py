@@ -1,62 +1,32 @@
-# tests/tokenizers/test_tokenizer_io.py
-
-from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from scratchgpt.model_io import (
     TokenizerLoadFailedError,
-    get_tokenizer,
+    load_tokenizer,
     save_tokenizer,
 )
-from scratchgpt.tokenizer.base_tokenizer import SerializableTokenizer
 from scratchgpt.tokenizer.char_tokenizer import CharTokenizer
 
 # A simple corpus for creating tokenizers in tests
 TEST_CORPUS = "hello world"
 
 
-@pytest.fixture
-def char_tokenizer_factory() -> Callable[[], SerializableTokenizer]:
-    """Provides a factory to create a simple CharTokenizer for tests."""
-    return lambda: CharTokenizer(text=TEST_CORPUS)
-
-
-def test_get_tokenizer_creates_new_from_factory(
+def test_load_tokenizer_loads_existing(
     tmp_path: Path,
-    char_tokenizer_factory: Callable[[], SerializableTokenizer],
 ) -> None:
     """
-    Tests that `get_tokenizer` correctly creates a new tokenizer
-    using the factory when no tokenizer exists at the path.
-    """
-    # Action: Call get_tokenizer on an empty directory
-    tokenizer = get_tokenizer(exp_path=tmp_path, default_factory=char_tokenizer_factory)
-
-    # Assertions
-    assert isinstance(tokenizer, CharTokenizer)
-    assert tokenizer.vocab_size == len(set(TEST_CORPUS))
-    # The function itself doesn't save, so the path should still be empty
-    tokenizer_config_path = tmp_path / "tokenizer" / "tokenizer_config.json"
-    assert not tokenizer_config_path.exists()
-
-
-def test_get_tokenizer_loads_existing(
-    tmp_path: Path,
-    char_tokenizer_factory: Callable[[], SerializableTokenizer],
-) -> None:
-    """
-    Tests that `get_tokenizer` correctly loads an existing tokenizer
+    Tests that `load_tokenizer` correctly loads an existing tokenizer
     from a path and ignores the default factory.
     """
     # Setup: Create and save a tokenizer to the temp directory first
     initial_tokenizer = CharTokenizer(text="abcde")
     save_tokenizer(tmp_path, initial_tokenizer)
 
-    # Action: Call get_tokenizer on the populated directory.
+    # Action: Call load_tokenizer on the populated directory.
     # The factory now uses a different corpus to ensure it's not being called.
-    loaded_tokenizer = get_tokenizer(exp_path=tmp_path, default_factory=char_tokenizer_factory)
+    loaded_tokenizer = load_tokenizer(exp_path=tmp_path)
 
     # Assertions
     assert isinstance(loaded_tokenizer, CharTokenizer)
@@ -65,9 +35,9 @@ def test_get_tokenizer_loads_existing(
     assert loaded_tokenizer.decode([0, 1, 2]) == "abc"
 
 
-def test_get_tokenizer_raises_on_bad_config_type(tmp_path: Path) -> None:
+def test_load_tokenizer_raises_on_bad_config_type(tmp_path: Path) -> None:
     """
-    Tests that `get_tokenizer` raises an error if the config file
+    Tests that `load_tokenizer` raises an error if the config file
     points to an unregistered tokenizer type.
     """
     # Setup: Manually create a bad tokenizer config file
@@ -79,12 +49,12 @@ def test_get_tokenizer_raises_on_bad_config_type(tmp_path: Path) -> None:
 
     # Action & Assertion: Expect a TokenizerLoadFailedError
     with pytest.raises(TokenizerLoadFailedError, match="Unknown tokenizer type"):
-        get_tokenizer(exp_path=tmp_path, default_factory=lambda: CharTokenizer(text="dummy"))
+        load_tokenizer(exp_path=tmp_path)
 
 
 def test_get_tokenizer_raises_on_missing_config_field(tmp_path: Path) -> None:
     """
-    Tests that `get_tokenizer` raises an error if the tokenizer
+    Tests that `load_tokenizer` raises an error if the tokenizer
     config file is missing the 'tokenizer_type' field.
     """
     # Setup: Manually create a malformed tokenizer config file
@@ -96,4 +66,4 @@ def test_get_tokenizer_raises_on_missing_config_field(tmp_path: Path) -> None:
 
     # Action & Assertion: Expect a TokenizerLoadFailedError
     with pytest.raises(TokenizerLoadFailedError, match="missing 'tokenizer_type' field"):
-        get_tokenizer(exp_path=tmp_path, default_factory=lambda: CharTokenizer(text="dummy"))
+        load_tokenizer(exp_path=tmp_path)

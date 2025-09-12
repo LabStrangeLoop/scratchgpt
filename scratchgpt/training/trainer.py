@@ -6,10 +6,11 @@ import torch
 from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from tqdm.auto import tqdm
 
 from scratchgpt.config import ScratchGPTTraining
+from scratchgpt.core.types import TensorTupleLoader
 from scratchgpt.data.datasource import ByteSizableDataSource, DataSource
 from scratchgpt.dataloader import PretokenizedDataset
 from scratchgpt.metering import AverageValueMeter
@@ -76,7 +77,7 @@ class Trainer:
 
     def _get_dataloader(
         self, data_source: DataSource, tokenizer: Tokenizer, cache_file: Path
-    ) -> DataLoader[tuple[Tensor, Tensor]]:
+    ) -> tuple[TensorTupleLoader, TensorTupleLoader]:
         """Handles DataLoader creation, using a pre-tokenized cache if it exists."""
         dtype = get_dtype_for_vocab_size(tokenizer.vocab_size)
 
@@ -90,16 +91,29 @@ class Trainer:
             block_size=self.model._block_size,
             dtype=dtype,
         )
-        # num_workers can be configured or determined dynamically
+
+        train_dataset, val_dataset = random_split(dataset, self.config.splits)
         cpu_count = torch.multiprocessing.cpu_count()
-        num_workers = int(cpu_count / 2) if cpu_count else 4
-        return DataLoader(
-            dataset,
+        num_workers = max(1, int(cpu_count / 2))
+        train_loader = DataLoader(
+            train_dataset,
             batch_size=self.config.batch_size,
             shuffle=True,
             pin_memory=True,
             num_workers=num_workers,
+            drop_last=False,
         )
+
+        val_loader = DataLoader(
+            val_dataset,
+            batch_size=self.config.batch_size,
+            shuffle=False,
+            pin_memory=True,
+            num_workers=num_workers,
+            drop_last=False,
+        )
+
+        return train_loader, val_loader
 
     def _run_epoch(self, dataloader: DataLoader[tuple[Tensor, Tensor]], stage: str) -> float:
         """Runs a single epoch of training or validation."""
@@ -134,9 +148,8 @@ class Trainer:
 
     def train(
         self,
-        train_data: DataSource,
+        data: DataSource,
         tokenizer: Tokenizer,
-        val_data: DataSource | None = None,
     ) -> None:
         """
         Trains the model.
@@ -146,12 +159,7 @@ class Trainer:
         saving model checkpoints.
         """
         train_cache = self.experiment_path / "train_data.bin"
-        train_loader = self._get_dataloader(train_data, tokenizer, train_cache)
-
-        val_loader = None
-        if val_data:
-            val_cache = self.experiment_path / "val_data.bin"
-            val_loader = self._get_dataloader(val_data, tokenizer, val_cache)
+        train_loader, val_loader = self._get_dataloader(data, tokenizer, train_cache)
 
         best_val_loss = float("inf")
         latest_model_path = self.experiment_path / "latest_model_weights.pth"
@@ -162,9 +170,8 @@ class Trainer:
             self._run_epoch(train_loader, "train")
             torch.save(self.model.state_dict(), latest_model_path)
 
-            if val_loader:
-                val_loss = self._run_epoch(val_loader, "validation")
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
-                    print(f"🎉 New best validation loss: {best_val_loss:.4f}. Saving model...")
-                    torch.save(self.model.state_dict(), best_model_path)
+            val_loss = self._run_epoch(val_loader, "validation")
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                print(f"🎉 New best validation loss: {best_val_loss:.4f}. Saving model...")
+                torch.save(self.model.state_dict(), best_model_path)

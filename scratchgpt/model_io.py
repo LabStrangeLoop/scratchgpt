@@ -1,6 +1,5 @@
 import json
 import os
-from collections.abc import Callable
 from pathlib import Path
 
 import torch
@@ -75,39 +74,6 @@ def load_tokenizer(exp_path: Path) -> SerializableTokenizer:
 
     print(f"✅ Loading tokenizer of type '{tokenizer_type}'...")
     return tokenizer_class.load(tokenizer_dir)
-
-
-def get_tokenizer(
-    exp_path: Path,
-    default_factory: Callable[[], SerializableTokenizer],
-) -> Tokenizer:
-    """
-    Gets a tokenizer from an experiment directory or creates it using a default.
-
-    This function first checks for a saved tokenizer configuration in the specified
-    experiment path. If found, it loads and returns that tokenizer. If not, it
-    invokes the `default_factory` function to create a new tokenizer instance,
-    which can then be saved by the training process.
-
-    Args:
-        exp_path: The path to the experiment directory.
-        default_factory: A zero-argument function that returns a new,
-            configured instance of a SerializableTokenizer. This is only
-            called if no tokenizer is found in `exp_path`.
-
-    Returns:
-        An instance of a SerializableTokenizer.
-
-    Raises:
-        TokenizerLoadFailedError: If a tokenizer configuration is found but
-            the tokenizer type is unknown or fails to load.
-    """
-    try:
-        return load_tokenizer(exp_path)
-    except FileNotFoundError:
-        # If it doesn't exist, create a new one using the factory.
-        print("No saved tokenizer found. Creating new tokenizer from factory.")
-        return default_factory()
 
 
 def save_tokenizer(exp_path: Path, tokenizer: Tokenizer) -> None:

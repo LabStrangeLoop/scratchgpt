@@ -6,8 +6,6 @@ import torch
 from pydantic_yaml import parse_yaml_file_as, to_yaml_file
 from torch.optim import AdamW
 
-from scratchgpt.tokenizer.base_tokenizer import SerializableTokenizer
-
 try:
     from scratchgpt.tokenizer.hf_tokenizer import HuggingFaceTokenizer
 except ImportError:
@@ -21,7 +19,7 @@ except ImportError:
 from scratchgpt.config import ScratchGPTConfig
 from scratchgpt.data.datasource import DataSource, FileDataSource, FolderDataSource
 from scratchgpt.model.model import TransformerLanguageModel
-from scratchgpt.model_io import get_tokenizer, load_model, save_tokenizer
+from scratchgpt.model_io import load_model, save_tokenizer
 from scratchgpt.training.trainer import Trainer
 
 
@@ -36,16 +34,10 @@ def parse_args() -> argparse.Namespace:
         help="The path to the experiment folder for saving checkpoints and configs.",
     )
     parser.add_argument(
-        "--train_source",
+        "--data_source",
         type=Path,
         required=True,
         help="The path to the training data source (file or folder).",
-    )
-    parser.add_argument(
-        "--val_source",
-        type=Path,
-        default=None,
-        help="Optional path to the validation data source (file or folder).",
     )
     parser.add_argument(
         "--tokenizer",
@@ -91,15 +83,11 @@ def main() -> None:
     torch.manual_seed(config.training.random_seed)
 
     # 2. Get the tokenizer from the Hugging Face Hub
-    def tokenizer_factory() -> SerializableTokenizer:
-        return HuggingFaceTokenizer.from_hub(repo_id=args.tokenizer)
-
-    tokenizer = get_tokenizer(exp_path=args.experiment, default_factory=tokenizer_factory)
+    tokenizer = HuggingFaceTokenizer.from_hub(repo_id=args.tokenizer)
     config.architecture.vocab_size = tokenizer.vocab_size
 
     # 3. Instantiate the data sources
-    train_data = get_data_source(args.train_source)
-    val_data = get_data_source(args.val_source) if args.val_source else None
+    data_source = get_data_source(args.data_source)
 
     # 4. Set up the model and optimizer
     device = torch.device(args.device)
@@ -127,7 +115,7 @@ def main() -> None:
     save_tokenizer(args.experiment, tokenizer)
 
     print("\nStarting training...")
-    trainer.train(train_data=train_data, tokenizer=tokenizer, val_data=val_data)
+    trainer.train(data=data_source, tokenizer=tokenizer)
     print("\n✅ Training complete.")
 
 
