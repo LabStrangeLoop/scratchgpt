@@ -21,7 +21,7 @@ on custom datasets and generating text based on prompts.
 - [x] Extract the loss calculation from the model
 - [x] Rename main to train
 - [x] Create or check tokenizer interface
-- [ ] Create an easy to use interface
+- [x] Create an easy to use interface
 - [ ] Make it into a package
 - [ ] Apply SOTA optimizations
 
