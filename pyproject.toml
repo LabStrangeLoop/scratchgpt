@@ -8,18 +8,26 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.12"
+
+keywords = ["transformer", "language-model", "deep-learning", "pytorch", "gpt", "tokenizer"]
+
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Development Status :: 3 - Alpha",  # or 4 - Beta, 5 - Production/Stable
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
 ]
+license = {file = "LICENSE"}
+
 dependencies = [
     "numpy>=2.3.2",
     "ptflops>=0.7.5",
     "pydantic-settings>=2.10.1",
     "pydantic-yaml>=1.6.0",
-    "tiktoken>=0.11.0",
     "torch>=2.8.0",
     "tqdm>=4.67.1",
     "types-tqdm>=4.67.0.20250809",
@@ -93,4 +101,3 @@ build-backend = "hatchling.build"
 [project.scripts]
 train = "scratchgpt.train:main"
 infer = "scratchgpt.infer:main"
-tiktoken = "scratchgpt.tokenizer.tiktoken:main"

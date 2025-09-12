@@ -20,7 +20,6 @@ from scratchgpt.model_io import (
     TokenizerLoadFailedError,
     get_best_model_weights_path,
     get_latest_model_weights_path,
-    get_tokenizer,
     get_tokenizer_path,
     load_model,
     load_tokenizer,
@@ -33,7 +32,6 @@ from scratchgpt.tokenizer.base_tokenizer import (
 )
 from scratchgpt.tokenizer.char_tokenizer import CharTokenizer, Utf8Tokenizer
 from scratchgpt.tokenizer.hf_tokenizer import HuggingFaceTokenizer
-from scratchgpt.tokenizer.tiktoken import TiktokenWrapper
 from scratchgpt.training.trainer import Trainer, get_dtype_for_vocab_size
 
 __all__ = [
@@ -52,7 +50,6 @@ __all__ = [
     "load_model",
     "load_tokenizer",
     "save_tokenizer",
-    "get_tokenizer",
     "get_best_model_weights_path",
     "get_latest_model_weights_path",
     "get_tokenizer_path",
@@ -65,7 +62,6 @@ __all__ = [
     "CharTokenizer",
     "Utf8Tokenizer",
     "HuggingFaceTokenizer",
-    "TiktokenWrapper",
     # Training
     "Trainer",
     "get_dtype_for_vocab_size",
