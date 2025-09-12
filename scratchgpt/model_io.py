@@ -7,11 +7,14 @@ import torch
 from scratchgpt.model.model import TransformerLanguageModel
 from scratchgpt.tokenizer import char_tokenizer, hf_tokenizer  # noqa
 from scratchgpt.tokenizer.base_tokenizer import TOKENIZER_REGISTRY, SerializableTokenizer, Tokenizer
-from scratchgpt.tokenizer.tiktoken import TiktokenWrapper
 
 
 class ModelLoadFailedError(Exception):
-    pass
+    """Raised when model loading fails"""
+
+
+class TokenizerLoadFailedError(Exception):
+    """Raised when a tokenizer cannot be loaded from a directory."""
 
 
 def get_best_model_weights_path(exp_folder: Path) -> Path:
@@ -40,37 +43,37 @@ def load_model(model_path: Path, model: TransformerLanguageModel, device: torch.
     return model
 
 
-def get_tokenizer(exp_path: Path) -> Tokenizer:
+def load_tokenizer(exp_path: Path) -> SerializableTokenizer:
     """
-    Loads a tokenizer from the experiment directory.
+    Loads a saved tokenizer from an experiment directory.
 
-    This function reads the `tokenizer_config.json` to determine the correct
-    tokenizer type and then uses its `load` method. If no saved tokenizer
-    is found, it defaults to Tiktoken.
+    This function is intended for inference, where a tokenizer must already
+    exist. It will raise an error if no tokenizer is found.
     """
-    tokenizer_dir = get_tokenizer_path(exp_path)
+    tokenizer_dir = exp_path / "tokenizer"
     config_path = tokenizer_dir / "tokenizer_config.json"
 
-    if config_path.is_file():
-        print(f"Found tokenizer config at: {config_path}")
-        with open(config_path, encoding="utf-8") as f:
-            config = json.load(f)
+    if not config_path.is_file():
+        raise FileNotFoundError(
+            f"Tokenizer config not found at '{config_path}'. "
+            "Ensure the model has been trained and a tokenizer was saved."
+        )
 
-        tokenizer_type = config.get("tokenizer_type")
-        if not tokenizer_type:
-            raise ValueError("Tokenizer config is missing 'tokenizer_type' field.")
+    with open(config_path, encoding="utf-8") as f:
+        config = json.load(f)
 
-        tokenizer_class = TOKENIZER_REGISTRY.get(tokenizer_type)
+    tokenizer_type = config.get("tokenizer_type")
+    if not tokenizer_type:
+        raise TokenizerLoadFailedError("Tokenizer config is missing 'tokenizer_type' field.")
 
-        if tokenizer_class:
-            print(f"Loading tokenizer of type '{tokenizer_type}'...")
-            return tokenizer_class.load(tokenizer_dir)
-        else:
-            raise ValueError(f"Unknown tokenizer type '{tokenizer_type}' in config.")
+    tokenizer_class = TOKENIZER_REGISTRY.get(tokenizer_type)
+    if not tokenizer_class:
+        raise TokenizerLoadFailedError(
+            f"Unknown tokenizer type '{tokenizer_type}' in config. Ensure it's registered with @register_tokenizer."
+        )
 
-    else:
-        print("No saved tokenizer found. Defaulting to Tiktoken 'cl100k_base'.")
-        return TiktokenWrapper("cl100k_base")
+    print(f"✅ Loading tokenizer of type '{tokenizer_type}'...")
+    return tokenizer_class.load(tokenizer_dir)
 
 
 def save_tokenizer(exp_path: Path, tokenizer: Tokenizer) -> None:
