@@ -6,6 +6,8 @@ import torch
 from pydantic_yaml import parse_yaml_file_as, to_yaml_file
 from torch.optim import AdamW
 
+from scratchgpt.tokenizer.base_tokenizer import SerializableTokenizer
+
 try:
     from scratchgpt.tokenizer.hf_tokenizer import HuggingFaceTokenizer
 except ImportError:
@@ -89,7 +91,7 @@ def main() -> None:
     torch.manual_seed(config.training.random_seed)
 
     # 2. Get the tokenizer from the Hugging Face Hub
-    def tokenizer_factory():
+    def tokenizer_factory() -> SerializableTokenizer:
         return HuggingFaceTokenizer.from_hub(repo_id=args.tokenizer)
 
     tokenizer = get_tokenizer(exp_path=args.experiment, default_factory=tokenizer_factory)

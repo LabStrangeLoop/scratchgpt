@@ -9,7 +9,7 @@ from rich.pretty import pprint as rpprint
 from scratchgpt.config import ScratchGPTConfig
 
 from .model.model import TransformerLanguageModel
-from .model_io import get_best_model_weights_path, get_tokenizer, load_model
+from .model_io import get_best_model_weights_path, load_model, load_tokenizer
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,14 +48,13 @@ def main() -> None:
     print(f"Using config file {config_file}")
     rpprint(config.model_dump(), indent_guides=True, expand_all=True)
 
-    tokenizer = get_tokenizer(args.experiment)
+    tokenizer = load_tokenizer(args.experiment)
 
     device = torch.device(args.device)
     best_model_path = get_best_model_weights_path(args.experiment)
 
     model = TransformerLanguageModel(
         config=config,
-        device=device,
     )
     load_model(best_model_path, model, device)
 

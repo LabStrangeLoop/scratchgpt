@@ -1,3 +1,5 @@
+# tests/tokenizers/test_tokenizer_io.py
+
 from collections.abc import Callable
 from pathlib import Path
 
@@ -22,8 +24,9 @@ def char_tokenizer_factory() -> Callable[[], SerializableTokenizer]:
 
 
 def test_get_tokenizer_creates_new_from_factory(
-    tmp_path: Path, char_tokenizer_factory: Callable[[], SerializableTokenizer]
-):
+    tmp_path: Path,
+    char_tokenizer_factory: Callable[[], SerializableTokenizer],
+) -> None:
     """
     Tests that `get_tokenizer` correctly creates a new tokenizer
     using the factory when no tokenizer exists at the path.
@@ -39,7 +42,10 @@ def test_get_tokenizer_creates_new_from_factory(
     assert not tokenizer_config_path.exists()
 
 
-def test_get_tokenizer_loads_existing(tmp_path: Path, char_tokenizer_factory: Callable[[], SerializableTokenizer]):
+def test_get_tokenizer_loads_existing(
+    tmp_path: Path,
+    char_tokenizer_factory: Callable[[], SerializableTokenizer],
+) -> None:
     """
     Tests that `get_tokenizer` correctly loads an existing tokenizer
     from a path and ignores the default factory.
@@ -59,7 +65,7 @@ def test_get_tokenizer_loads_existing(tmp_path: Path, char_tokenizer_factory: Ca
     assert loaded_tokenizer.decode([0, 1, 2]) == "abc"
 
 
-def test_get_tokenizer_raises_on_bad_config_type(tmp_path: Path):
+def test_get_tokenizer_raises_on_bad_config_type(tmp_path: Path) -> None:
     """
     Tests that `get_tokenizer` raises an error if the config file
     points to an unregistered tokenizer type.
@@ -73,10 +79,10 @@ def test_get_tokenizer_raises_on_bad_config_type(tmp_path: Path):
 
     # Action & Assertion: Expect a TokenizerLoadFailedError
     with pytest.raises(TokenizerLoadFailedError, match="Unknown tokenizer type"):
-        get_tokenizer(exp_path=tmp_path, default_factory=lambda: None)
+        get_tokenizer(exp_path=tmp_path, default_factory=lambda: CharTokenizer(text="dummy"))
 
 
-def test_get_tokenizer_raises_on_missing_config_field(tmp_path: Path):
+def test_get_tokenizer_raises_on_missing_config_field(tmp_path: Path) -> None:
     """
     Tests that `get_tokenizer` raises an error if the tokenizer
     config file is missing the 'tokenizer_type' field.
@@ -90,4 +96,4 @@ def test_get_tokenizer_raises_on_missing_config_field(tmp_path: Path):
 
     # Action & Assertion: Expect a TokenizerLoadFailedError
     with pytest.raises(TokenizerLoadFailedError, match="missing 'tokenizer_type' field"):
-        get_tokenizer(exp_path=tmp_path, default_factory=lambda: None)
+        get_tokenizer(exp_path=tmp_path, default_factory=lambda: CharTokenizer(text="dummy"))

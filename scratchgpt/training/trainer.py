@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from torch import Tensor
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
@@ -73,7 +74,9 @@ class Trainer:
                 else:
                     pbar.update(1)
 
-    def _get_dataloader(self, data_source: DataSource, tokenizer: Tokenizer, cache_file: Path) -> DataLoader:
+    def _get_dataloader(
+        self, data_source: DataSource, tokenizer: Tokenizer, cache_file: Path
+    ) -> DataLoader[tuple[Tensor, Tensor]]:
         """Handles DataLoader creation, using a pre-tokenized cache if it exists."""
         dtype = get_dtype_for_vocab_size(tokenizer.vocab_size)
 
@@ -98,7 +101,7 @@ class Trainer:
             num_workers=num_workers,
         )
 
-    def _run_epoch(self, dataloader: DataLoader, stage: str) -> float:
+    def _run_epoch(self, dataloader: DataLoader[tuple[Tensor, Tensor]], stage: str) -> float:
         """Runs a single epoch of training or validation."""
         is_train = stage == "train"
         self.model.train(is_train)
@@ -114,10 +117,10 @@ class Trainer:
 
                 logits = self.model(batch)
                 B, T, C = logits.shape
-                loss = F.cross_entropy(logits.view(B * T, C), targets.view(B * T))
+                loss: Tensor = F.cross_entropy(logits.view(B * T, C), targets.view(B * T))
 
                 if is_train:
-                    loss.backward()
+                    loss.backward()  # type: ignore[no-untyped-call]
                     self.optimizer.step()
 
                 meter.add(loss.item())
@@ -134,7 +137,7 @@ class Trainer:
         train_data: DataSource,
         tokenizer: Tokenizer,
         val_data: DataSource | None = None,
-    ):
+    ) -> None:
         """
         Trains the model.
 

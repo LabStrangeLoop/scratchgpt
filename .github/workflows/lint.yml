@@ -13,4 +13,4 @@ jobs:
           python-version: "3.12"
       - run: uv sync --group dev --extra hf-tokenizers
       - run: uv run ruff check .
-      - run: uv run mypy .
+      - run: uv run mypy scratchgpt
