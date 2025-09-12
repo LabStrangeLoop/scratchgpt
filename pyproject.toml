@@ -14,6 +14,8 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+license = {file = "LICENSE"}
+
 dependencies = [
     "numpy>=2.3.2",
     "ptflops>=0.7.5",
