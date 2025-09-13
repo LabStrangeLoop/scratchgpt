@@ -12,10 +12,10 @@ Usage:
     python simple.py
 """
 
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.request import urlretrieve
 
 import torch
 from torch.optim import AdamW
@@ -33,31 +33,17 @@ from scratchgpt import (
 
 
 def download_darwin_text(data_file: Path) -> None:
-    """Download Darwin's 'On the Origin of Species' if not already present."""
-    if data_file.exists():
-        print(f"✅ Data file already exists: {data_file}")
-        return
-
-    print("📥 Downloading 'On the Origin of Species' by Charles Darwin...")
+    """Download Darwin's 'On the Origin of Species' using Python's built-in urllib."""
+    print("Downloading 'On the Origin of Species' by Charles Darwin...")
     url = "https://www.gutenberg.org/files/1228/1228-0.txt"
 
     try:
-        # Use curl to download the file
-        _ = subprocess.run(
-            ["curl", "-s", url, "-o", str(data_file)],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        print(f"✅ Downloaded data to: {data_file}")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to download data: {e}")
-        print("Please install curl or manually download the file from:")
+        urlretrieve(url, data_file)
+        print(f"Downloaded data to: {data_file}")
+    except Exception as e:
+        print(f"Failed to download data: {e}")
+        print("Please manually download the file from:")
         print(url)
-        sys.exit(1)
-    except FileNotFoundError:
-        print("❌ curl not found. Please install curl or manually download:")
-        print(f"  curl -s {url} > {data_file}")
         sys.exit(1)
 
 
