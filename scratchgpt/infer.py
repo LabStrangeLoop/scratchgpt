@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-d",
+        "-dv",
         "--device",
         help="What hardware you want to run the model on",
         default="cuda",

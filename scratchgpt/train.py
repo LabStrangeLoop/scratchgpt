@@ -34,18 +34,21 @@ def parse_args() -> argparse.Namespace:
         help="The path to the experiment folder for saving checkpoints and configs.",
     )
     parser.add_argument(
+        "-d",
         "--data_source",
         type=Path,
         required=True,
         help="The path to the training data source (file or folder).",
     )
     parser.add_argument(
+        "-t",
         "--tokenizer",
         type=str,
         default="gpt2",
         help="The name of the Hugging Face Hub tokenizer to use (e.g., 'gpt2', 'bert-base-uncased').",
     )
     parser.add_argument(
+        "-dv",
         "--device",
         type=str,
         default="cuda" if torch.cuda.is_available() else "cpu",
