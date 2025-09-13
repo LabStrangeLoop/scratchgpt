@@ -66,7 +66,7 @@ projects using ScratchGPT.
 
 ## Full Usage Examples
 
-Please take a look at the ![simple example](./examples/simple.py) in the examples folder.
+Please take a look at the [simple example](./examples/simple.py) in the examples folder.
 
 ## Usage
 
