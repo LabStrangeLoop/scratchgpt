@@ -126,6 +126,7 @@ def main():
         print(f"Using device: {device}")
 
         model = TransformerLanguageModel(config)
+        model = model.to(device)
         print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 
         optimizer = AdamW(model.parameters(), lr=config.training.learning_rate)
@@ -141,7 +142,13 @@ def main():
         )
 
         print("\nStarting training...")
-        trainer.train(data=data_source, tokenizer=tokenizer)
+        print("(Press Ctrl-C to stop training early and see text generation)")
+
+        try:
+            trainer.train(data=data_source, tokenizer=tokenizer)
+            print("\nTraining completed successfully!")
+        except KeyboardInterrupt:
+            print("\n\nTraining interrupted by user. Moving to text generation with current model state...")
 
         # Step 6: Simple text generation demo
         print("\nTesting text generation:")
@@ -162,7 +169,7 @@ def main():
                 result = tokenizer.decode(generated[0].tolist())
                 print(f"Generated: {result}")
 
-        print("\nTraining complete! All temporary files automatically cleaned up.")
+        print("\nAll temporary files automatically cleaned up.")
         print("Run the script again to start fresh.")
 
 
