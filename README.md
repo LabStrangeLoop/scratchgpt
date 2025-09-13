@@ -58,6 +58,16 @@ projects using ScratchGPT.
    uv sync --all-groups
    ```
 
+3. Install from pip:
+   ```
+   pip install scratchgpt
+   ```
+
+
+## Full Usage Examples
+
+Please take a look at the ![simple example](./examples/simple.py) in the examples folder.
+
 ## Usage
 
 ### Training
