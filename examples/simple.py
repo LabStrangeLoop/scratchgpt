@@ -23,13 +23,13 @@ from torch.optim import AdamW
 # Import ScratchGPT components
 from scratchgpt import (
     CharTokenizer,
-    FileDataSource,
     ScratchGPTArchitecture,
     ScratchGPTConfig,
     ScratchGPTTraining,
     Trainer,
     TransformerLanguageModel,
 )
+from scratchgpt.data.hf_datasource import HFDataSource
 
 
 def download_darwin_text(data_file: Path) -> None:
@@ -67,17 +67,14 @@ def create_simple_config() -> ScratchGPTConfig:
         random_seed=1337,
     )
 
-    return ScratchGPTConfig(
-        architecture=architecture,
-        training=training
-    )
+    return ScratchGPTConfig(architecture=architecture, training=training)
 
 
 def prepare_text_for_tokenizer(data_file: Path) -> str:
     """Read the text file for tokenization."""
     print(f"Reading text from: {data_file}")
 
-    with open(data_file, encoding='utf-8') as f:
+    with open(data_file, encoding="utf-8") as f:
         text = f.read()
 
     print(f"Text length: {len(text):,} characters")
@@ -118,8 +115,10 @@ def main():
         # Step 3: Create configuration
         config = create_simple_config()
         config.architecture.vocab_size = tokenizer.vocab_size
-        print(f"Model configuration: {config.architecture.embedding_size}D embeddings, "
-              f"{config.architecture.num_blocks} blocks, {config.architecture.num_heads} heads")
+        print(
+            f"Model configuration: {config.architecture.embedding_size}D embeddings, "
+            f"{config.architecture.num_blocks} blocks, {config.architecture.num_heads} heads"
+        )
 
         # Step 4: Setup model and training
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -130,15 +129,11 @@ def main():
         print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 
         optimizer = AdamW(model.parameters(), lr=config.training.learning_rate)
-        data_source = FileDataSource(data_file)
+        data_source = HFDataSource(data_file)
 
         # Step 5: Create trainer and start training
         trainer = Trainer(
-            model=model,
-            config=config.training,
-            optimizer=optimizer,
-            experiment_path=experiment_dir,
-            device=device
+            model=model, config=config.training, optimizer=optimizer, experiment_path=experiment_dir, device=device
         )
 
         print("\nStarting training...")
@@ -154,11 +149,7 @@ def main():
         print("\nTesting text generation:")
         model.eval()
 
-        test_prompts = [
-            "Natural selection",
-            "The origin of species",
-            "Darwin observed"
-        ]
+        test_prompts = ["Natural selection", "The origin of species", "Darwin observed"]
 
         for prompt in test_prompts:
             print(f"\nPrompt: '{prompt}'")

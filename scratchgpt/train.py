@@ -1,25 +1,16 @@
 import argparse
-import sys
 from pathlib import Path
 
 import torch
 from pydantic_yaml import parse_yaml_file_as, to_yaml_file
 from torch.optim import AdamW
 
-try:
-    from scratchgpt.tokenizer.hf_tokenizer import HuggingFaceTokenizer
-except ImportError:
-    print(
-        "HuggingFaceTokenizer not available. Please install the hf-tokenizers extras:\n"
-        "pip install 'scratchgpt[hf-tokenizers]'",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
 from scratchgpt.config import ScratchGPTConfig
-from scratchgpt.data.datasource import DataSource, FileDataSource, FolderDataSource
+from scratchgpt.data.datasource import DataSource
+from scratchgpt.data.hf_datasource import HFDataSource
 from scratchgpt.model.model import TransformerLanguageModel
 from scratchgpt.model_io import load_model, save_tokenizer
+from scratchgpt.tokenizer.hf_tokenizer import HuggingFaceTokenizer
 from scratchgpt.training.trainer import Trainer
 
 
@@ -36,9 +27,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-d",
         "--data_source",
-        type=Path,
+        type=str,
         required=True,
-        help="The path to the training data source (file or folder).",
+        help="Dataset name from HF Hub or path to local data (file/folder).",
     )
     parser.add_argument(
         "-t",
@@ -55,18 +46,37 @@ def parse_args() -> argparse.Namespace:
         choices=["cuda", "cpu"],
         help="The hardware device to run training on.",
     )
+    parser.add_argument(
+        "--streaming",
+        action="store_true",
+        help="Use streaming mode for large datasets that don't fit in memory.",
+    )
+    parser.add_argument(
+        "--text-column",
+        type=str,
+        default="text",
+        help="Name of the column containing text data (for structured datasets).",
+    )
     return parser.parse_args()
 
 
-def get_data_source(path: Path) -> DataSource:
-    """Instantiates the correct DataSource based on the path."""
-    if path.is_file():
-        print(f"Using single file data source: {path}")
-        return FileDataSource(path)
-    if path.is_dir():
-        print(f"Using folder data source: {path}")
-        return FolderDataSource(path)
-    raise FileNotFoundError(f"Data source path not found or is not a file/directory: {path}")
+def get_data_source(
+    path_or_name: str,
+    split: str = "train",
+    streaming: bool = False,
+    text_column: str = "text",
+) -> DataSource:
+    """Create a data source using HF datasets."""
+    print(f"Loading dataset: {path_or_name}")
+    if streaming:
+        print("Using streaming mode for data loading")
+
+    return HFDataSource(
+        path_or_name=path_or_name,
+        split=split,
+        streaming=streaming,
+        text_column=text_column,
+    )
 
 
 def main() -> None:
@@ -89,8 +99,12 @@ def main() -> None:
     tokenizer = HuggingFaceTokenizer.from_hub(repo_id=args.tokenizer)
     config.architecture.vocab_size = tokenizer.vocab_size
 
-    # 3. Instantiate the data sources
-    data_source = get_data_source(args.data_source)
+    # 3. Create the data source
+    data_source = get_data_source(
+        path_or_name=args.data_source,
+        streaming=args.streaming,
+        text_column=args.text_column,
+    )
 
     # 4. Set up the model and optimizer
     device = torch.device(args.device)
