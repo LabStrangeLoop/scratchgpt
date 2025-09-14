@@ -70,7 +70,7 @@ strict = true
 exclude = [".venv"]
 
 [[tool.mypy.overrides]]
-module = ["ptflops", "tokenizers.*", "huggingface_hub.*"]
+module = ["ptflops", "tokenizers.*", "huggingface_hub.*", "datasets.*"]
 ignore_missing_imports = true
 
 [tool.ruff]

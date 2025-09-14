@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import Any
 
 import torch
 from torch import Tensor
@@ -35,7 +36,7 @@ class Trainer:
         self.device = device
         self.experiment_path.mkdir(exist_ok=True, parents=True)
 
-    def _get_dataloader(self, data_source: DataSource, tokenizer: Tokenizer) -> tuple[DataLoader, DataLoader]:
+    def _get_dataloader(self, data_source: DataSource, tokenizer: Tokenizer) -> tuple[DataLoader[Any], DataLoader[Any]]:
         """Handles DataLoader creation using HF datasets."""
 
         # Check if it's HFDataSource to access dataset directly
@@ -93,7 +94,7 @@ class Trainer:
 
         return train_loader, val_loader
 
-    def _run_epoch(self, dataloader: DataLoader, stage: str) -> float:
+    def _run_epoch(self, dataloader: DataLoader[dict[str, Tensor]], stage: str) -> float:
         """Runs a single epoch of training or validation."""
         is_train = stage == "train"
         self.model.train(is_train)
@@ -114,7 +115,7 @@ class Trainer:
                 loss: Tensor = F.cross_entropy(logits.view(B * T, C), labels.view(B * T))
 
                 if is_train:
-                    loss.backward()
+                    loss.backward()  # type: ignore[no-untyped-call]
                     self.optimizer.step()
 
                 meter.add(loss.item())

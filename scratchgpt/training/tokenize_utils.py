@@ -5,12 +5,14 @@ from datasets import Dataset
 
 from scratchgpt.tokenizer.base_tokenizer import Tokenizer
 
+TokenizeFunc = Callable[[dict[str, list[Any]]], dict[str, list[list[int]]]]
+
 
 def create_tokenize_function(
     tokenizer: Tokenizer,
     block_size: int,
     text_column: str = "text",
-) -> Callable:
+) -> TokenizeFunc:
     """
     Create a tokenization function for HF datasets.map().
 
@@ -25,7 +27,7 @@ def create_tokenize_function(
 
     def tokenize_and_chunk(examples: dict[str, list[Any]]) -> dict[str, list[list[int]]]:
         """Tokenize text and chunk into blocks."""
-        texts = examples.get(text_column, examples)
+        texts: Any = examples.get(text_column, examples)
 
         if isinstance(texts, str):
             texts = [texts]

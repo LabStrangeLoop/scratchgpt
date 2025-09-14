@@ -99,7 +99,7 @@ class HFDataSource:
             raise TypeError("Streaming datasets don't support indexing")
         sample = self._dataset[idx]
         if isinstance(sample, dict):
-            return sample[self.text_column]
+            return str(sample[self.text_column])
         return str(sample)
 
     def map(
@@ -160,7 +160,8 @@ class HFDataSource:
     def column_names(self) -> list[str] | None:
         """Get column names if available."""
         if hasattr(self._dataset, "column_names"):
-            return self._dataset.column_names
+            return_value: list[str] | None = self._dataset.column_names
+            return return_value
         return None
 
     @property

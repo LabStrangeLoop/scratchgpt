@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from scratchgpt.data.datasource import DataSource
 from scratchgpt.data.hf_datasource import HFDataSource
@@ -9,7 +10,7 @@ def create_data_source(
     split: str = "train",
     streaming: bool = False,
     text_column: str = "text",
-    **kwargs,
+    **kwargs: Any,
 ) -> DataSource:
     """
     Create a data source from a path or dataset name.
