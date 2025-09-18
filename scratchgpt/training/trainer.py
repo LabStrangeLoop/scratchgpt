@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-from typing import Any
 
 import torch
 from torch import Tensor
@@ -11,11 +10,9 @@ from tqdm.auto import tqdm
 
 from scratchgpt.config import ScratchGPTTraining
 from scratchgpt.data.datasource import DataSource
-from scratchgpt.data.hf_datasource import HFDataSource
 from scratchgpt.metering import AverageValueMeter
 from scratchgpt.model.model import TransformerLanguageModel
 from scratchgpt.tokenizer.base_tokenizer import Tokenizer
-from scratchgpt.training.tokenize_utils import prepare_dataset_for_training
 
 
 class Trainer:
@@ -36,64 +33,6 @@ class Trainer:
         self.device = device
         self.experiment_path.mkdir(exist_ok=True, parents=True)
 
-    def _get_dataloader(self, data_source: DataSource, tokenizer: Tokenizer) -> tuple[DataLoader[Any], DataLoader[Any]]:
-        """Handles DataLoader creation using HF datasets."""
-
-        # Check if it's HFDataSource to access dataset directly
-        if not isinstance(data_source, HFDataSource):
-            raise TypeError("DataSource must be HFDataSource")
-
-        print("⏳ Tokenizing dataset (using HF cached tokenization)...")
-
-        # Get the underlying HF dataset
-        dataset = data_source.dataset
-
-        # Prepare dataset (tokenize and chunk)
-        cpu_count = torch.multiprocessing.cpu_count()
-        num_proc = max(1, int(cpu_count / 2))
-
-        prepared_dataset = prepare_dataset_for_training(
-            dataset,
-            tokenizer,
-            self.model._block_size,
-            num_proc=num_proc,
-        )
-
-        print(f"✅ Dataset prepared with {len(prepared_dataset)} samples")
-
-        # Split into train and validation
-        train_split, val_split = self.config.splits
-
-        # Use HF's train_test_split
-        split_datasets = prepared_dataset.train_test_split(
-            test_size=val_split,
-            seed=self.config.random_seed,
-        )
-
-        train_dataset = split_datasets["train"]
-        val_dataset = split_datasets["test"]
-
-        # Create DataLoaders
-        train_loader = DataLoader(
-            train_dataset,
-            batch_size=self.config.batch_size,
-            shuffle=True,
-            pin_memory=True,
-            num_workers=num_proc,
-            drop_last=False,
-        )
-
-        val_loader = DataLoader(
-            val_dataset,
-            batch_size=self.config.batch_size,
-            shuffle=False,
-            pin_memory=True,
-            num_workers=num_proc,
-            drop_last=False,
-        )
-
-        return train_loader, val_loader
-
     def _run_epoch(self, dataloader: DataLoader[dict[str, Tensor]], stage: str) -> float:
         """Runs a single epoch of training or validation."""
         is_train = stage == "train"
@@ -103,7 +42,7 @@ class Trainer:
         pbar = tqdm(dataloader, desc=stage.capitalize(), file=sys.stdout)
         with torch.set_grad_enabled(is_train):
             for batch in pbar:
-                # Extract input_ids and labels from batch
+                # IMPORTANT: implicit strong relationship to tokenize_utils.py
                 input_ids = batch["input_ids"].to(self.device)
                 labels = batch["labels"].to(self.device)
 
@@ -129,7 +68,7 @@ class Trainer:
 
     def train(
         self,
-        data: DataSource,
+        data_source: DataSource,
         tokenizer: Tokenizer,
     ) -> None:
         """
@@ -138,7 +77,13 @@ class Trainer:
         This method orchestrates the entire training pipeline, using HF datasets
         for efficient tokenization caching and data loading.
         """
-        train_loader, val_loader = self._get_dataloader(data, tokenizer)
+        train_loader, val_loader = data_source.get_dataloaders(
+            tokenizer=tokenizer,
+            block_size=self.model._block_size,
+            batch_size=self.config.batch_size,
+            splits=self.config.splits,
+            random_seed=self.config.random_seed,
+        )
 
         best_val_loss = float("inf")
         latest_model_path = self.experiment_path / "latest_model_weights.pth"
@@ -149,8 +94,12 @@ class Trainer:
             self._run_epoch(train_loader, "train")
             torch.save(self.model.state_dict(), latest_model_path)
 
-            val_loss = self._run_epoch(val_loader, "validation")
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                print(f"🎉 New best validation loss: {best_val_loss:.4f}. Saving model...")
+            if val_loader:
+                val_loss = self._run_epoch(val_loader, "validation")
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    print(f"🎉 New best validation loss: {best_val_loss:.4f}. Saving model...")
+                    torch.save(self.model.state_dict(), best_model_path)
+            else:
+                print("🎉 Saving latest model as best because we have no validation dataset")
                 torch.save(self.model.state_dict(), best_model_path)

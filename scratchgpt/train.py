@@ -6,8 +6,7 @@ from pydantic_yaml import parse_yaml_file_as, to_yaml_file
 from torch.optim import AdamW
 
 from scratchgpt.config import ScratchGPTConfig
-from scratchgpt.data.datasource import DataSource
-from scratchgpt.data.hf_datasource import HFDataSource
+from scratchgpt.data import create_data_source
 from scratchgpt.model.model import TransformerLanguageModel
 from scratchgpt.model_io import load_model, save_tokenizer
 from scratchgpt.tokenizer.hf_tokenizer import HuggingFaceTokenizer
@@ -36,7 +35,25 @@ def parse_args() -> argparse.Namespace:
         "--tokenizer",
         type=str,
         default="gpt2",
-        help="The name of the Hugging Face Hub tokenizer to use (e.g., 'gpt2', 'bert-base-uncased').",
+        help="The name of the Hugging Face Hub tokenizer to use (e.g., 'gpt2').",
+    )
+    parser.add_argument(
+        "-s",
+        "--split",
+        type=str,
+        default="train",
+        help="The dataset split to use for training (e.g., 'train', 'validation').",
+    )
+    parser.add_argument(
+        "--text-column",
+        type=str,
+        default="text",
+        help="Name of the column containing text data.",
+    )
+    parser.add_argument(
+        "--streaming",
+        action="store_true",
+        help="Use streaming mode for large datasets that don't fit in memory.",
     )
     parser.add_argument(
         "-dv",
@@ -46,37 +63,7 @@ def parse_args() -> argparse.Namespace:
         choices=["cuda", "cpu"],
         help="The hardware device to run training on.",
     )
-    parser.add_argument(
-        "--streaming",
-        action="store_true",
-        help="Use streaming mode for large datasets that don't fit in memory.",
-    )
-    parser.add_argument(
-        "--text-column",
-        type=str,
-        default="text",
-        help="Name of the column containing text data (for structured datasets).",
-    )
     return parser.parse_args()
-
-
-def get_data_source(
-    path_or_name: str,
-    split: str = "train",
-    streaming: bool = False,
-    text_column: str = "text",
-) -> DataSource:
-    """Create a data source using HF datasets."""
-    print(f"Loading dataset: {path_or_name}")
-    if streaming:
-        print("Using streaming mode for data loading")
-
-    return HFDataSource(
-        path_or_name=path_or_name,
-        split=split,
-        streaming=streaming,
-        text_column=text_column,
-    )
 
 
 def main() -> None:
@@ -96,12 +83,18 @@ def main() -> None:
     torch.manual_seed(config.training.random_seed)
 
     # 2. Get the tokenizer from the Hugging Face Hub
+    print(f"Loading tokenizer: {args.tokenizer}")
     tokenizer = HuggingFaceTokenizer.from_hub(repo_id=args.tokenizer)
     config.architecture.vocab_size = tokenizer.vocab_size
 
     # 3. Create the data source
-    data_source = get_data_source(
+    print(f"Loading dataset: {args.data_source} (split: {args.split})")
+    if args.streaming:
+        print("Using streaming mode for data loading")
+
+    data_source = create_data_source(
         path_or_name=args.data_source,
+        split=args.split,
         streaming=args.streaming,
         text_column=args.text_column,
     )
@@ -111,7 +104,6 @@ def main() -> None:
     print(f"Using device: {device}")
     model = TransformerLanguageModel(config)
 
-    # Load existing model weights if they exist in the experiment folder
     best_model_path = args.experiment / "best_model_weights.pth"
     model = load_model(best_model_path, model, device)
 
@@ -132,7 +124,7 @@ def main() -> None:
     save_tokenizer(args.experiment, tokenizer)
 
     print("\nStarting training...")
-    trainer.train(data=data_source, tokenizer=tokenizer)
+    trainer.train(data_source=data_source, tokenizer=tokenizer)
     print("\n✅ Training complete.")
 
 

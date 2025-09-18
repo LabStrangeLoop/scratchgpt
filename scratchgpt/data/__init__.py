@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 
 from scratchgpt.data.datasource import DataSource
@@ -6,7 +5,7 @@ from scratchgpt.data.hf_datasource import HFDataSource
 
 
 def create_data_source(
-    path_or_name: Path,
+    path_or_name: str,
     split: str = "train",
     streaming: bool = False,
     text_column: str = "text",

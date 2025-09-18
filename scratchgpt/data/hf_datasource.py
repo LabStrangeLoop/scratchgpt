@@ -1,170 +1,148 @@
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, cast
 
-from datasets import Dataset, IterableDataset, load_dataset
+import torch
+from datasets import Dataset, load_dataset
+from datasets import IterableDataset as HFIterableDataset
+from torch import Tensor
+from torch.utils.data import DataLoader
+from torch.utils.data import IterableDataset as TorchIterableDataset
 
-from scratchgpt.data.datasource import DataSource
+from scratchgpt.core.types import DictTensorLoader
+from scratchgpt.tokenizer.base_tokenizer import Tokenizer
+from scratchgpt.training.tokenize_utils import prepare_dataset_for_training
 
 
-class HFDataSource:
-    """DataSource implementation using HuggingFace datasets library."""
+class _StreamingBlockDataset(TorchIterableDataset[dict[str, Tensor]]):
+    """
+    A PyTorch IterableDataset that wraps a Hugging Face IterableDataset,
+    tokenizes it, and yields blocks of a fixed size.
+    """
 
     def __init__(
         self,
-        path_or_name: str | Path,
-        split: str = "train",
-        streaming: bool = False,
-        text_column: str = "text",
-        **load_kwargs: Any,
+        hf_dataset: HFIterableDataset,
+        tokenizer: Tokenizer,
+        block_size: int,
+        text_column: str,
     ):
-        """
-        Initialize HF DataSource.
+        self._hf_dataset = hf_dataset
+        self._tokenizer = tokenizer
+        self._block_size = block_size
+        self._text_column = text_column
 
-        Args:
-            path_or_name: Dataset name from Hub, or path to local file/folder
-            split: Which split to use (train, validation, test)
-            streaming: Whether to use streaming mode for large datasets
-            text_column: Name of the column containing text data
-            **load_kwargs: Additional arguments for load_dataset
-        """
-        self.path_or_name = str(path_or_name)
-        self.split = split
-        self.streaming = streaming
-        self.text_column = text_column
-        self._dataset = self._load_dataset(**load_kwargs)
+    def __iter__(self) -> Iterator[dict[str, Tensor]]:
+        buffer: list[int] = []
+        chunk_size = self._block_size + 1
 
-    def _load_dataset(self, **load_kwargs: Any) -> Dataset | IterableDataset:
-        """Load dataset from Hub or local files."""
-        path = Path(self.path_or_name)
+        for example in self._hf_dataset:
+            # Safely get text from the example dict.
+            if text := example.get(self._text_column):
+                buffer.extend(self._tokenizer.encode(text))
 
-        # Check if it's a local path
-        if path.exists():
-            if path.is_file():
-                # Single file
-                extension = path.suffix.lower()
-                if extension == ".csv":
-                    dataset = load_dataset(
-                        "csv", data_files=str(path), split=self.split, streaming=self.streaming, **load_kwargs
-                    )
-                elif extension in [".json", ".jsonl"]:
-                    dataset = load_dataset(
-                        "json", data_files=str(path), split=self.split, streaming=self.streaming, **load_kwargs
-                    )
-                elif extension == ".parquet":
-                    dataset = load_dataset(
-                        "parquet", data_files=str(path), split=self.split, streaming=self.streaming, **load_kwargs
-                    )
-                else:
-                    # Default to text format
-                    dataset = load_dataset(
-                        "text", data_files=str(path), split=self.split, streaming=self.streaming, **load_kwargs
-                    )
-            else:
-                # Directory with text files
-                data_files = list(path.glob("**/*.txt")) + list(path.glob("**/*.md"))
-                if not data_files:
-                    # Try other text extensions
-                    data_files = list(path.glob("**/*"))
-                    data_files = [f for f in data_files if f.is_file()]
+                # Yield blocks as they become available in the buffer.
+                while len(buffer) >= chunk_size:
+                    block = buffer[:chunk_size]
+                    buffer = buffer[chunk_size:]
+                    yield {
+                        "input_ids": torch.tensor(block[:-1]),
+                        "labels": torch.tensor(block[1:]),
+                    }
 
-                data_files_str = [str(f) for f in data_files]
-                dataset = load_dataset(
-                    "text", data_files=data_files_str, split=self.split, streaming=self.streaming, **load_kwargs
+
+class HFDataSource:
+    """
+    A DataSource that loads data from the Hugging Face Hub.
+    Handles both standard and streaming datasets.
+    """
+
+    def __init__(self, path_or_name: str, split: str = "train", streaming: bool = False, text_column: str = "text"):
+        self._text_column = text_column
+        self._streaming = streaming
+
+        local_path = Path(path_or_name)
+
+        # Case 1: The path is a local directory.
+        if local_path.is_dir():
+            print(f"Detected local directory. Loading all text files from: {local_path}")
+            self._dataset = load_dataset(
+                "text",
+                data_dir=str(local_path),
+                split=split,
+                streaming=streaming,
+            )
+        # Case 2: The path is a local file.
+        elif local_path.is_file():
+            print(f"Detected local file: {local_path}")
+            is_common_ext = local_path.suffix in {".txt", ".md"}
+
+            if is_common_ext:
+                print("Loading as plain text file.")
+                self._dataset = load_dataset(
+                    "text",
+                    data_files={split: str(local_path)},
+                    split=split,
+                    streaming=streaming,
                 )
-        else:
-            # Assume it's a Hub dataset
-            dataset = load_dataset(self.path_or_name, split=self.split, streaming=self.streaming, **load_kwargs)
-
-        return cast(Dataset | IterableDataset, dataset)
-
-    def __iter__(self) -> Iterator[str]:
-        """Iterate over text samples."""
-        for sample in self._dataset:
-            if isinstance(sample, dict):
-                yield sample[self.text_column]
             else:
-                yield str(sample)
+                print("Attempting to infer file type...")
+                self._dataset = load_dataset(
+                    str(local_path),
+                    split=split,
+                    streaming=streaming,
+                )
+        # Case 3: The path is not local, assume it's a Hub dataset ID.
+        else:
+            print(f"Assuming '{path_or_name}' is a Hugging Face Hub dataset.")
+            self._dataset = load_dataset(
+                path_or_name,
+                split=split,
+                streaming=streaming,
+            )
 
-    def __len__(self) -> int:
-        """Return dataset length."""
-        if isinstance(self._dataset, IterableDataset):
-            # Streaming datasets don't have length
-            raise TypeError("Streaming datasets don't support len()")
-        return len(self._dataset)
-
-    def __getitem__(self, idx: int) -> str:
-        """Get sample by index."""
-        if isinstance(self._dataset, IterableDataset):
-            raise TypeError("Streaming datasets don't support indexing")
-        sample = self._dataset[idx]
-        if isinstance(sample, dict):
-            return str(sample[self.text_column])
-        return str(sample)
-
-    def map(
+    def get_dataloaders(
         self,
-        function: Callable[..., Any],
-        batched: bool = False,
-        num_proc: int | None = None,
-        remove_columns: list[str] | None = None,
-        **kwargs: Any,
-    ) -> DataSource:
-        """Apply function to dataset samples."""
-        mapped_dataset = self._dataset.map(
-            function,
-            batched=batched,
-            num_proc=num_proc,
-            remove_columns=remove_columns,
-            **kwargs,
-        )
-        new_source = HFDataSource(self.path_or_name, self.split, self.streaming, self.text_column)
-        new_source._dataset = mapped_dataset
-        return new_source
+        tokenizer: Tokenizer,
+        block_size: int,
+        batch_size: int,
+        splits: tuple[float, float],
+        random_seed: int,
+    ) -> tuple[DictTensorLoader, DictTensorLoader | None]:
+        cpu_count = torch.multiprocessing.cpu_count() or 1
+        num_proc = max(1, cpu_count // 2)
 
-    def train_test_split(
-        self,
-        test_size: float | None = None,
-        train_size: float | None = None,
-        seed: int | None = None,
-    ) -> dict[str, DataSource]:
-        """Split into train and test sets."""
-        if isinstance(self._dataset, IterableDataset):
-            raise TypeError("Streaming datasets don't support train_test_split")
+        match self._dataset:
+            case Dataset():
+                prepared_dataset = prepare_dataset_for_training(
+                    self._dataset, tokenizer, block_size, self._text_column, num_proc
+                )
+                split_datasets = prepared_dataset.train_test_split(test_size=splits[1], seed=random_seed)
+                train_loader = DataLoader(
+                    split_datasets["train"],
+                    batch_size=batch_size,
+                    shuffle=True,
+                    pin_memory=True,
+                    num_workers=num_proc,
+                )
+                val_loader = DataLoader(
+                    split_datasets["test"],
+                    batch_size=batch_size,
+                    pin_memory=True,
+                    num_workers=num_proc,
+                )
+                return train_loader, val_loader
 
-        split_dataset = self._dataset.train_test_split(
-            test_size=test_size,
-            train_size=train_size,
-            seed=seed,
-        )
+            case HFIterableDataset():
+                print(
+                    "⚠️  Note: Validation splitting is not supported for streaming datasets. "
+                    "Validation loader will be None."
+                )
 
-        result: dict[str, DataSource] = {}
-        for split_name, split_data in split_dataset.items():
-            new_source = HFDataSource(self.path_or_name, self.split, self.streaming, self.text_column)
-            new_source._dataset = split_data
-            result[split_name] = new_source
+                streaming_dataset = _StreamingBlockDataset(self._dataset, tokenizer, block_size, self._text_column)
+                # shuffle=True is not supported for IterableDatasets in DataLoader
+                train_loader = DataLoader(streaming_dataset, batch_size=batch_size)
 
-        return result
+                return train_loader, None
 
-    def select(self, indices: list[int]) -> DataSource:
-        """Select specific indices."""
-        if isinstance(self._dataset, IterableDataset):
-            raise TypeError("Streaming datasets don't support select")
-
-        selected = self._dataset.select(indices)
-        new_source = HFDataSource(self.path_or_name, self.split, self.streaming, self.text_column)
-        new_source._dataset = selected
-        return new_source
-
-    @property
-    def column_names(self) -> list[str] | None:
-        """Get column names if available."""
-        if hasattr(self._dataset, "column_names"):
-            return_value: list[str] | None = self._dataset.column_names
-            return return_value
-        return None
-
-    @property
-    def dataset(self) -> Dataset | IterableDataset:
-        """Access underlying HF dataset."""
-        return self._dataset
+            case _:
+                raise TypeError(f"Unsupported dataset type: {type(self._dataset)}")

@@ -29,7 +29,7 @@ from scratchgpt import (
     Trainer,
     TransformerLanguageModel,
 )
-from scratchgpt.data.hf_datasource import HFDataSource
+from scratchgpt.data import create_data_source
 
 
 def download_darwin_text(data_file: Path) -> None:
@@ -81,7 +81,7 @@ def prepare_text_for_tokenizer(data_file: Path) -> str:
     return text
 
 
-def main():
+def main() -> None:
     print("ScratchGPT Simple Training Example")
     print("=" * 50)
 
@@ -129,18 +129,22 @@ def main():
         print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 
         optimizer = AdamW(model.parameters(), lr=config.training.learning_rate)
-        data_source = HFDataSource(data_file)
+        data_source = create_data_source(str(data_file))
 
         # Step 5: Create trainer and start training
         trainer = Trainer(
-            model=model, config=config.training, optimizer=optimizer, experiment_path=experiment_dir, device=device
+            model=model,
+            config=config.training,
+            optimizer=optimizer,
+            experiment_path=experiment_dir,
+            device=device,
         )
 
         print("\nStarting training...")
         print("(Press Ctrl-C to stop training early and see text generation)")
 
         try:
-            trainer.train(data=data_source, tokenizer=tokenizer)
+            trainer.train(data_source=data_source, tokenizer=tokenizer)
             print("\nTraining completed successfully!")
         except KeyboardInterrupt:
             print("\n\nTraining interrupted by user. Moving to text generation with current model state...")

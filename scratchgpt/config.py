@@ -18,6 +18,10 @@ def ensure_split_is_valid(v: tuple[float, float]) -> tuple[float, float]:
     is_valid_split = math.isclose(splits_sum, 1.0)
     if not is_valid_split:
         raise ValueError("Invalid data 'split'")
+
+    val_split = v[1]
+    if val_split == 0.0:
+        raise ValueError("You can't have 0 sized validation split.")
     return v
 
 
