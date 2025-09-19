@@ -68,16 +68,15 @@ class MultiHeadAttention(nn.Module):
 
 
 class FeedFoward(nn.Module):
-    def __init__(self, embedding_size: int) -> None:
+    def __init__(self, embedding_size: int, dropout_rate: float) -> None:
         super().__init__()
         self._ffwd_multipler = 4
-        self._dropout = 0.2
 
         self._net = nn.Sequential(
             nn.Linear(embedding_size, embedding_size * self._ffwd_multipler),
             nn.ReLU(),
             nn.Linear(self._ffwd_multipler * embedding_size, embedding_size),
-            nn.Dropout(self._dropout),
+            nn.Dropout(dropout_rate),
         )
 
     def forward(self, tensor: Tensor) -> Tensor:
@@ -102,7 +101,7 @@ class Block(nn.Module):
             head_size,
             dropout_rate,
         )
-        self._ffwd = FeedFoward(embedding_size)
+        self._ffwd = FeedFoward(embedding_size, dropout_rate)
         self._layer_norm_attention = nn.LayerNorm(embedding_size)
         self._layer_norm_ffwd = nn.LayerNorm(embedding_size)
 

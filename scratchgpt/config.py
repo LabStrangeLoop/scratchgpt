@@ -1,7 +1,7 @@
 import math
 from typing import Annotated
 
-from pydantic import AfterValidator, Field
+from pydantic import AfterValidator, Field, model_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -39,6 +39,18 @@ class ScratchGPTArchitecture(BaseSettings):
     num_heads: int = 6
     num_blocks: int = 6
     vocab_size: int | None = None
+
+    @model_validator(mode="after")
+    def validate_embedding_and_heads(self):
+        """
+        Ensures that the embedding_size is perfectly divisible by the number of attention heads.
+        """
+        if self.embedding_size % self.num_heads != 0:
+            raise ValueError(
+                f"Incompatible model architecture: embedding_size ({self.embedding_size}) "
+                f"must be divisible by num_heads ({self.num_heads})."
+            )
+        return self
 
     model_config = SettingsConfigDict(
         env_prefix="ARCHITECTURE_",
