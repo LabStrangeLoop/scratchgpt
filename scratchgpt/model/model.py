@@ -157,14 +157,24 @@ class TransformerLanguageModel(nn.Module):
         logits: Tensor = self._lm_head(x)  # (B, T, vocab_size)
         return logits
 
-    def generate(self, context: Tensor, max_new_tokens: int) -> Tensor:
+    def generate(
+        self,
+        context: Tensor,
+        max_new_tokens: int,
+        stop_token: int | None = None,
+        temperature: float = 1.0,
+    ) -> Tensor:
         for _ in range(max_new_tokens):
             cropped_context = context[:, -self._block_size :]
             logits = self(cropped_context)
-            logits = logits[:, -1, :]  # becomes (B, C)
+            logits = logits[:, -1, :] / temperature  # becomes (B, C)
             probs = F.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
             context = torch.cat((context, idx_next), dim=1)
+
+            if stop_token is not None and idx_next == stop_token:
+                return context
+
         return context
 
 
