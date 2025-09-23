@@ -101,7 +101,7 @@ def main() -> None:
         print(f"Vocabulary size: {tokenizer.vocab_size}")
 
         # Alternative: Use a pre-trained tokenizer like GPT-2
-        # This requires: pip install 'scratchgpt[hf-tokenizers]'
+        # This requires: uv sync --extra hf-tokenizers
         #
         # from scratchgpt import HuggingFaceTokenizer
         # tokenizer = HuggingFaceTokenizer.from_hub("gpt2")
