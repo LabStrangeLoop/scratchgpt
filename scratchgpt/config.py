@@ -1,5 +1,5 @@
 import math
-from typing import Annotated
+from typing import Annotated, Self
 
 from pydantic import AfterValidator, Field, model_validator
 from pydantic_settings import (
@@ -41,7 +41,7 @@ class ScratchGPTArchitecture(BaseSettings):
     vocab_size: int | None = None
 
     @model_validator(mode="after")
-    def validate_embedding_and_heads(self):
+    def validate_embedding_and_heads(self) -> Self:
         """
         Ensures that the embedding_size is perfectly divisible by the number of attention heads.
         """
