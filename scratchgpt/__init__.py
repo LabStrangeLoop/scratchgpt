@@ -7,13 +7,8 @@ from scratchgpt.config import (
     ScratchGPTConfig,
     ScratchGPTTraining,
 )
-from scratchgpt.data.datasource import (
-    ByteSizableDataSource,
-    DataSource,
-    FileDataSource,
-    FolderDataSource,
-    LineByLineFileDataSource,
-)
+from scratchgpt.data.datasource import DataSource
+from scratchgpt.data.hf_datasource import HFDataSource
 from scratchgpt.model.model import TransformerLanguageModel
 from scratchgpt.model_io import (
     ModelLoadFailedError,
@@ -32,7 +27,7 @@ from scratchgpt.tokenizer.base_tokenizer import (
 )
 from scratchgpt.tokenizer.char_tokenizer import CharTokenizer, Utf8Tokenizer
 from scratchgpt.tokenizer.hf_tokenizer import HuggingFaceTokenizer
-from scratchgpt.training.trainer import Trainer, get_dtype_for_vocab_size
+from scratchgpt.training.trainer import Trainer
 
 __all__ = [
     # Core Model and Config
@@ -42,10 +37,7 @@ __all__ = [
     "ScratchGPTTraining",
     # Data Sources
     "DataSource",
-    "ByteSizableDataSource",
-    "FileDataSource",
-    "FolderDataSource",
-    "LineByLineFileDataSource",
+    "HFDataSource",
     # Model I/O
     "load_model",
     "load_tokenizer",
@@ -64,5 +56,4 @@ __all__ = [
     "HuggingFaceTokenizer",
     # Training
     "Trainer",
-    "get_dtype_for_vocab_size",
 ]

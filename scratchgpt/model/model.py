@@ -68,16 +68,15 @@ class MultiHeadAttention(nn.Module):
 
 
 class FeedFoward(nn.Module):
-    def __init__(self, embedding_size: int) -> None:
+    def __init__(self, embedding_size: int, dropout_rate: float) -> None:
         super().__init__()
         self._ffwd_multipler = 4
-        self._dropout = 0.2
 
         self._net = nn.Sequential(
             nn.Linear(embedding_size, embedding_size * self._ffwd_multipler),
             nn.ReLU(),
             nn.Linear(self._ffwd_multipler * embedding_size, embedding_size),
-            nn.Dropout(self._dropout),
+            nn.Dropout(dropout_rate),
         )
 
     def forward(self, tensor: Tensor) -> Tensor:
@@ -102,7 +101,7 @@ class Block(nn.Module):
             head_size,
             dropout_rate,
         )
-        self._ffwd = FeedFoward(embedding_size)
+        self._ffwd = FeedFoward(embedding_size, dropout_rate)
         self._layer_norm_attention = nn.LayerNorm(embedding_size)
         self._layer_norm_ffwd = nn.LayerNorm(embedding_size)
 
@@ -158,14 +157,24 @@ class TransformerLanguageModel(nn.Module):
         logits: Tensor = self._lm_head(x)  # (B, T, vocab_size)
         return logits
 
-    def generate(self, context: Tensor, max_new_tokens: int) -> Tensor:
+    def generate(
+        self,
+        context: Tensor,
+        max_new_tokens: int,
+        stop_token: int | None = None,
+        temperature: float = 1.0,
+    ) -> Tensor:
         for _ in range(max_new_tokens):
             cropped_context = context[:, -self._block_size :]
             logits = self(cropped_context)
-            logits = logits[:, -1, :]  # becomes (B, C)
+            logits = logits[:, -1, :] / temperature  # becomes (B, C)
             probs = F.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
             context = torch.cat((context, idx_next), dim=1)
+
+            if stop_token is not None and idx_next == stop_token:
+                return context
+
         return context
 
 

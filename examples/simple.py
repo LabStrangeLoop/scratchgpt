@@ -23,13 +23,13 @@ from torch.optim import AdamW
 # Import ScratchGPT components
 from scratchgpt import (
     CharTokenizer,
-    FileDataSource,
     ScratchGPTArchitecture,
     ScratchGPTConfig,
     ScratchGPTTraining,
     Trainer,
     TransformerLanguageModel,
 )
+from scratchgpt.data import create_data_source
 
 
 def download_darwin_text(data_file: Path) -> None:
@@ -67,24 +67,21 @@ def create_simple_config() -> ScratchGPTConfig:
         random_seed=1337,
     )
 
-    return ScratchGPTConfig(
-        architecture=architecture,
-        training=training
-    )
+    return ScratchGPTConfig(architecture=architecture, training=training)
 
 
 def prepare_text_for_tokenizer(data_file: Path) -> str:
     """Read the text file for tokenization."""
     print(f"Reading text from: {data_file}")
 
-    with open(data_file, encoding='utf-8') as f:
+    with open(data_file, encoding="utf-8") as f:
         text = f.read()
 
     print(f"Text length: {len(text):,} characters")
     return text
 
 
-def main():
+def main() -> None:
     print("ScratchGPT Simple Training Example")
     print("=" * 50)
 
@@ -104,7 +101,7 @@ def main():
         print(f"Vocabulary size: {tokenizer.vocab_size}")
 
         # Alternative: Use a pre-trained tokenizer like GPT-2
-        # This requires: pip install 'scratchgpt[hf-tokenizers]'
+        # This requires: uv sync --extra hf-tokenizers
         #
         # from scratchgpt import HuggingFaceTokenizer
         # tokenizer = HuggingFaceTokenizer.from_hub("gpt2")
@@ -118,8 +115,10 @@ def main():
         # Step 3: Create configuration
         config = create_simple_config()
         config.architecture.vocab_size = tokenizer.vocab_size
-        print(f"Model configuration: {config.architecture.embedding_size}D embeddings, "
-              f"{config.architecture.num_blocks} blocks, {config.architecture.num_heads} heads")
+        print(
+            f"Model configuration: {config.architecture.embedding_size}D embeddings, "
+            f"{config.architecture.num_blocks} blocks, {config.architecture.num_heads} heads"
+        )
 
         # Step 4: Setup model and training
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -130,7 +129,7 @@ def main():
         print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 
         optimizer = AdamW(model.parameters(), lr=config.training.learning_rate)
-        data_source = FileDataSource(data_file)
+        data_source = create_data_source(str(data_file))
 
         # Step 5: Create trainer and start training
         trainer = Trainer(
@@ -138,14 +137,14 @@ def main():
             config=config.training,
             optimizer=optimizer,
             experiment_path=experiment_dir,
-            device=device
+            device=device,
         )
 
         print("\nStarting training...")
         print("(Press Ctrl-C to stop training early and see text generation)")
 
         try:
-            trainer.train(data=data_source, tokenizer=tokenizer)
+            trainer.train(data_source=data_source, tokenizer=tokenizer)
             print("\nTraining completed successfully!")
         except KeyboardInterrupt:
             print("\n\nTraining interrupted by user. Moving to text generation with current model state...")
@@ -154,11 +153,7 @@ def main():
         print("\nTesting text generation:")
         model.eval()
 
-        test_prompts = [
-            "Natural selection",
-            "The origin of species",
-            "Darwin observed"
-        ]
+        test_prompts = ["Natural selection", "The origin of species", "Darwin observed"]
 
         for prompt in test_prompts:
             print(f"\nPrompt: '{prompt}'")
