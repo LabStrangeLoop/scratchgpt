@@ -127,6 +127,7 @@ class HFDataSource:
                 val_loader = DataLoader(
                     split_datasets["test"],
                     batch_size=batch_size,
+                    shuffle=False,
                     pin_memory=True,
                     num_workers=num_proc,
                 )
