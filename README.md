@@ -123,7 +123,7 @@ This project uses various development tools:
 Run the following commands to ensure code quality:
 
 ```
-uv run ruff --fix .
+uv run ruff check --fix .
 uv run mypy scratchgpt
 uv run pytest ./tests/
 ```

@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Literal, Protocol
 
 from scratchgpt.core.types import DictTensorLoader
 from scratchgpt.tokenizer.base_tokenizer import Tokenizer
@@ -19,6 +19,7 @@ class DataSource(Protocol):
         batch_size: int,
         splits: tuple[float, float],
         random_seed: int,
+        iteration_type: Literal["chunking", "sliding"],
     ) -> tuple[DictTensorLoader, DictTensorLoader | None]:
         """
         Processes data and returns train and validation DataLoaders.

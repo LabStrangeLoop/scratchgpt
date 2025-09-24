@@ -1,16 +1,18 @@
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Literal
 
 import torch
-from datasets import Dataset, load_dataset
+from datasets import Dataset as HFDataset
 from datasets import IterableDataset as HFIterableDataset
+from datasets import load_dataset
 from torch import Tensor
 from torch.utils.data import DataLoader
 from torch.utils.data import IterableDataset as TorchIterableDataset
 
 from scratchgpt.core.types import DictTensorLoader
 from scratchgpt.tokenizer.base_tokenizer import Tokenizer
-from scratchgpt.training.tokenize_utils import prepare_dataset_for_training
+from scratchgpt.training.tokenize_utils import SlidingWindowDataset, prepare_dataset_for_training
 
 
 class _StreamingBlockDataset(TorchIterableDataset[dict[str, Tensor]]):
@@ -107,25 +109,57 @@ class HFDataSource:
         batch_size: int,
         splits: tuple[float, float],
         random_seed: int,
+        iteration_type: Literal["chunking", "sliding"],
     ) -> tuple[DictTensorLoader, DictTensorLoader | None]:
         cpu_count = torch.multiprocessing.cpu_count() or 1
         num_proc = max(1, cpu_count // 2)
 
-        match self._dataset:
-            case Dataset():
+        match self._dataset, iteration_type:
+            case HFDataset() as dataset, "chunking":
                 prepared_dataset = prepare_dataset_for_training(
-                    self._dataset, tokenizer, block_size, self._text_column, num_proc
+                    dataset, tokenizer, block_size, self._text_column, num_proc
                 )
                 split_datasets = prepared_dataset.train_test_split(test_size=splits[1], seed=random_seed)
                 train_loader = DataLoader(
                     split_datasets["train"],
                     batch_size=batch_size,
                     shuffle=True,
-                    pin_memory=True,
+                    pin_memory=False,
                     num_workers=num_proc,
                 )
                 val_loader = DataLoader(
                     split_datasets["test"],
+                    batch_size=batch_size,
+                    shuffle=False,
+                    pin_memory=False,
+                    num_workers=num_proc,
+                )
+                return train_loader, val_loader
+
+            case HFDataset() as dataset, "sliding":
+                split_datasets = dataset.train_test_split(test_size=splits[1], seed=random_seed)
+                train_torch_dataset = SlidingWindowDataset(
+                    split_datasets["train"],
+                    tokenizer,
+                    block_size,
+                    self._text_column,
+                )  # noqa: F821
+                val_torch_dataset = SlidingWindowDataset(
+                    split_datasets["test"],
+                    tokenizer,
+                    block_size,
+                    self._text_column,
+                )
+
+                train_loader = DataLoader(
+                    train_torch_dataset,
+                    batch_size=batch_size,
+                    shuffle=True,
+                    pin_memory=True,
+                    num_workers=num_proc,
+                )
+                val_loader = DataLoader(
+                    val_torch_dataset,
                     batch_size=batch_size,
                     shuffle=False,
                     pin_memory=True,
@@ -133,17 +167,20 @@ class HFDataSource:
                 )
                 return train_loader, val_loader
 
-            case HFIterableDataset():
+            case HFIterableDataset() as dataset, "chunking":
                 print(
                     "⚠️  Note: Validation splitting is not supported for streaming datasets. "
                     "Validation loader will be None."
                 )
 
-                streaming_dataset = _StreamingBlockDataset(self._dataset, tokenizer, block_size, self._text_column)
+                streaming_dataset = _StreamingBlockDataset(dataset, tokenizer, block_size, self._text_column)
                 # shuffle=True is not supported for IterableDatasets in DataLoader
                 train_loader = DataLoader(streaming_dataset, batch_size=batch_size)
 
                 return train_loader, None
+
+            case HFIterableDataset() as dataset, "sliding":
+                raise ValueError("Sliding not supported for streaming dataset")
 
             case _:
                 raise TypeError(f"Unsupported dataset type: {type(self._dataset)}")

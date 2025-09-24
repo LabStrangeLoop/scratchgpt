@@ -1,7 +1,10 @@
 from collections.abc import Callable
 from typing import Any
 
-from datasets import Dataset
+import torch
+from datasets import Dataset as HFDataset
+from torch import Tensor
+from torch.utils.data import Dataset as TorchDataset
 
 from scratchgpt.tokenizer.base_tokenizer import Tokenizer
 
@@ -56,12 +59,12 @@ def create_tokenize_function(
 
 
 def prepare_dataset_for_training(
-    dataset: Dataset,
+    dataset: HFDataset,
     tokenizer: Tokenizer,
     block_size: int,
     text_column: str,
     num_proc: int | None = None,
-) -> Dataset:
+) -> HFDataset:
     """
     Prepares a dataset for training by tokenizing and chunking it.
     """
@@ -80,3 +83,30 @@ def prepare_dataset_for_training(
     tokenized_dataset.set_format("torch", columns=["input_ids", "labels"])
 
     return tokenized_dataset
+
+
+class SlidingWindowDataset(TorchDataset[dict[str, Tensor]]):
+    def __init__(
+            self,
+            hf_dataset: HFDataset,
+            tokenizer: Tokenizer,
+            block_size: int,
+            text_column: str,
+            ) -> None:
+        super().__init__()
+
+        self.block_size = block_size
+
+        all_tokens: list[int] = []
+        for example in hf_dataset:
+            all_tokens.extend(tokenizer.encode(example[text_column]))
+
+        self.tokens = torch.tensor(all_tokens, dtype=torch.long)
+
+    def __len__(self) -> int:
+        return len(self.tokens) - self.block_size
+
+    def __getitem__(self, idx: int) -> dict[str, Tensor]:
+        block = self.tokens[idx : idx + self.block_size]
+        target = self.tokens[idx + 1 : idx + self.block_size + 1]
+        return {"input_ids": block, "labels": target}
