@@ -65,7 +65,7 @@ def create_simple_config() -> ScratchGPTConfig:
         batch_size=32,
         dropout_rate=0.1,
         random_seed=1337,
-        iteration_type="sliding",
+        iteration_type="chunking",
     )
 
     return ScratchGPTConfig(architecture=architecture, training=training)
