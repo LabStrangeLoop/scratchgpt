@@ -1,5 +1,5 @@
 import math
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import AfterValidator, Field, model_validator
 from pydantic_settings import (
@@ -69,6 +69,7 @@ class ScratchGPTTraining(BaseSettings):
     dropout_rate: float = 0.2
     random_seed: int = 1337
     splits: SplitType = (0.8, 0.2)
+    iteration_type: Literal["chunking", "sliding"] = "chunking"
 
     model_config = SettingsConfigDict(
         env_prefix="TRAINING_",

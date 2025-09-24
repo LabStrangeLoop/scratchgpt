@@ -83,6 +83,7 @@ class Trainer:
             batch_size=self.config.batch_size,
             splits=self.config.splits,
             random_seed=self.config.random_seed,
+            iteration_type=self.config.iteration_type,
         )
 
         best_val_loss = float("inf")
