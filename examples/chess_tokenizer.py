@@ -1,5 +1,4 @@
 import json
-import re
 from pathlib import Path
 from typing import Self, override
 
@@ -30,7 +29,9 @@ class ChessTokenizer(SerializableTokenizer):
     def _create_vocabulary() -> list[str]:
         """Generates the complete, deterministic vocabulary for chess."""
         # Control and special tokens
-        tokens = {"[PAD]", "[UNK]", "[BOS]", "[EOS]", "1-0", "0-1", "1/2-1/2", "*", "+", "#", "O-O", "O-O-O"}
+        tokens = {"[PAD]", "[UNK]", "[BOS]", "[EOS]", "*", "+", "#"}
+        tokens.add("O-O")    # Kingside castling
+        tokens.add("O-O-O")  # Queenside castling
 
         # Move numbers (1. to 300. and 1... to 300...)
         for i in range(1, 301):
@@ -75,10 +76,8 @@ class ChessTokenizer(SerializableTokenizer):
 
     @override
     def encode(self, text: str) -> list[int]:
-        # Add space after move numbers (e.g., "1.e4" -> "1. e4")
-        processed_text = re.sub(r"(\d+\.{1,3})", r"\1 ", text)
         # Add spaces around check/mate symbols to ensure they are tokenized separately
-        processed_text = processed_text.replace("+", " + ").replace("#", " # ")
+        processed_text = text.replace("+", " + ").replace("#", " # ")
 
         raw_tokens = [token for token in processed_text.split() if token]
 
@@ -143,18 +142,13 @@ class ChessTokenizer(SerializableTokenizer):
 def main() -> None:
     tokenizer = ChessTokenizer()
     game = """
-1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 e6 6.f4 a6 7.Qf3 Qb6 8.Nb3 Qc7
-9.Bd3 b5 10.g4 b4 11.Ne2 Bb7 12.g5 Nfd7 13.Bd2 Nc6 14.Nbd4 Nc5 15.Nxc6 Qxc6
-16.Nd4 Qd7 17.O-O-O Qa4 18.Kb1 b3 19.Nxb3 Nxe4 20.Qf1 g6 21.Be1 Bg7 22.h4 O-O
-23.h5 Nc5 24.Rh4 Nxd3 25.Rxd3 Be4 26.hxg6 fxg6 27.Rc3 Rac8 28.Rh2 Bf5 29.Qf2 Bxc3
-30.Bxc3 e5 31.fxe5 Bd3 32.Qe3 Rf1+ 33.Nc1 Rxc3 34.bxc3 Qb5+ 35.Ka1 Bc4 36.exd6 Bf7
-37.Rf2 Rxf2 38.Qxf2 Qxg5 39.Kb2 h5 40.Qd4 h4 41.Nd3 h3 42.d7 Qd8 43.Ne5 h2
-44.Nc6 Qxd7 45.Qxd7 h1=Q 46.Ne5 Qf1 47.Nxf7 Qxf7 48.Qc8+ Kg7 49.Qxa6 g5 50.a4 g4
-51.Qb5 Qg6 52.a5 g3 53.a6 g2 54.Qb7+ Kh6 55.a7 g1=Q 56.a8=Q Q6b6+ 57.Qxb6+ Qxb6+
-58.Ka2 Qe6+ 59.Ka1 Qc4 60.Qf8+ Kg6 61.Qb4 Qf1+ 62.Kb2 Kh7 63.Qe4+ Kg8 64.Qd5+ Kh8
-65.Qh5+ Kg8 66.Qg5+ Kh8 67.Qd8+ Kh7 68.Qd7+ Kg8 69.Qe8+ Kg7 70.Qe7+ Kg8 71.Qd8+ Kh7
-72.Qd7+ Kh8 73.Qd4+ Kg8 74.c4 Qf8 75.Qd5+ Kh8 76.Qe5+ Kh7 77.Qh5+ Kg8 78.Qd5+ Kh7
-79.c5 Qb8+ 80.Kc3 Kh8 81.Qd4+ Kg8 82.c6  1-0""".strip().replace("\n", " ")
+1. e4 d5 2. Nf3 dxe4 3. Ng5 Bf5 4. Nc3 Qd4 5. Qe2 Nf6 6. Qb5+ Nbd7 7. Qxb7 Rb8 8. Qxc7 h6 9. Nh3 Bxh3 10. gxh3 e6
+11. Qg3 Ne5 12. Bb5+ Ke7 13. Be2 g5 14. O-O h5 15. d3 g4 16. Qh4 gxh3 17. Bg5 Kd6 18. Bxf6 Rg8+ 19. Kh1 Ng4
+20. Bxd4 Rxb2 21. Qg3+ e5 22. Nxe4+ Kd5 23. Nf6+ Nxf6 24. Qxe5+ Kc6 25. Qxf6+ Bd6 26. Bxb2 Rg2 27. Qf3+ Kc5 28. d4+ Kb4
+29. c3+ Ka4 30. Bd1+ Kb5 31. a4+ Kc4 32. Qd3+ Kd5 33. Bf3+ Ke6 34. Bxg2 hxg2+ 35. Kxg2 h4 36. Qe4+ Kd7 37. f4 f5
+38. Qxf5+ Kc6 39. d5+ Kc5 40. Qd3 Kb6 41. Qd4+ Bc5 42. Qc4 a5 43. Ba3 Bxa3 44. Qb5+ Kc7 45. Rxa3 Kd6 46. c4 Ke7
+47. Qc6 Kf7 48. Re3
+""".strip().replace("\n", " ")
 
     print(f"{tokenizer.vocab_size=}")
     print(f"{game=}")
