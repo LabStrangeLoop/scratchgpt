@@ -23,14 +23,13 @@ DEFAULT_LICHESS_URL = "https://database.lichess.org/standard/lichess_db_standard
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Download and parse Lichess chess games database"
-    )
+    parser = argparse.ArgumentParser(description="Download and parse Lichess chess games database")
     parser.add_argument(
-        "-g", "--game-url",
+        "-g",
+        "--game-url",
         type=str,
         default=DEFAULT_LICHESS_URL,
-        help=f"Lichess database URL to download (default: {DEFAULT_LICHESS_URL})"
+        help=f"Lichess database URL to download (default: {DEFAULT_LICHESS_URL})",
     )
     return parser.parse_args()
 
@@ -40,18 +39,18 @@ def clean_game_text(game_text: str) -> str:
     import re
 
     # Remove comments in curly braces
-    game_text = re.sub(r'\{[^}]*\}', ' ', game_text)
+    game_text = re.sub(r"\{[^}]*\}", " ", game_text)
 
     # Remove evaluation annotations like [%eval 0.5]
-    game_text = re.sub(r'\[%[^\]]*\]', ' ', game_text)
+    game_text = re.sub(r"\[%[^\]]*\]", " ", game_text)
 
     # Clean up multiple spaces
-    game_text = re.sub(r'\s+', ' ', game_text).strip()
+    game_text = re.sub(r"\s+", " ", game_text).strip()
 
     # Remove game results from the end
-    for result in ['1-0', '0-1', '1/2-1/2', '*']:
-        if game_text.endswith(' ' + result):
-            game_text = game_text[:-len(' ' + result)].strip()
+    for result in ["1-0", "0-1", "1/2-1/2", "*"]:
+        if game_text.endswith(" " + result):
+            game_text = game_text[: -len(" " + result)].strip()
             break
 
     return game_text
@@ -66,12 +65,12 @@ def download_and_decompress(url: str, temp_dir: Path) -> Path:
     print(f"Downloading: {filename}")
     urlretrieve(url, compressed_file)
 
-    pgn_file = temp_dir / filename.replace('.zst', '')
+    pgn_file = temp_dir / filename.replace(".zst", "")
     print(f"Decompressing: {filename}")
 
     dctx = zstd.ZstdDecompressor()
 
-    with open(compressed_file, 'rb') as compressed_fp, open(pgn_file, 'wb') as output_fp:
+    with open(compressed_file, "rb") as compressed_fp, open(pgn_file, "wb") as output_fp:
         dctx.copy_stream(compressed_fp, output_fp)
 
     # Remove compressed file
@@ -87,12 +86,12 @@ def parse_pgn_to_games(pgn_file: Path) -> str:
     current_game_lines: list[str] = []
     games_processed: int = 0
 
-    with open(pgn_file, encoding='utf-8', errors='ignore') as f:
+    with open(pgn_file, encoding="utf-8", errors="ignore") as f:
         for line_num, line in enumerate(f, 1):
             line = line.strip()
             if line_num % 100_000 == 0:
                 print(f"Processed {line_num:,} lines, found {games_processed:,} games")
-            if line.startswith('['):  # Skip metadata lines (lines starting with [)
+            if line.startswith("["):  # Skip metadata lines (lines starting with [)
                 continue
             if not line:  # Skip empty lines
                 continue
@@ -100,9 +99,9 @@ def parse_pgn_to_games(pgn_file: Path) -> str:
             current_game_lines.append(line)  # Add to current game
 
             # Check if game ended (contains result)
-            if any(result in line for result in ['1-0', '0-1', '1/2-1/2', '*']):
+            if any(result in line for result in ["1-0", "0-1", "1/2-1/2", "*"]):
                 # Join all moves for this game
-                game_text = ' '.join(current_game_lines).strip()
+                game_text = " ".join(current_game_lines).strip()
                 clean_text = clean_game_text(game_text)
 
                 if len(clean_text.split()) > 2:  # More than just the result and more than one move
@@ -112,7 +111,7 @@ def parse_pgn_to_games(pgn_file: Path) -> str:
                 current_game_lines = []
 
     print(f"Extracted {len(games)} valid games")
-    return '\n'.join(games)
+    return "\n".join(games)
 
 
 def main():
@@ -127,10 +126,10 @@ def main():
         games_text = parse_pgn_to_games(pgn_file)
 
         processed_file = temp_path / "chess_games.txt"
-        with open(processed_file, 'w', encoding='utf-8') as f:
+        with open(processed_file, "w", encoding="utf-8") as f:
             f.write(games_text)
 
-        sample_games = games_text.split('\n')[:3]
+        sample_games = games_text.split("\n")[:3]
         print("\nSample games:")
         for i, game in enumerate(sample_games, 1):
             preview = game[:100] + "..." if len(game) > 100 else game
