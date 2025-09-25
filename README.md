@@ -7,7 +7,7 @@
   <a href="https://github.com/LabStrangeLoop/scratchgpt/actions/workflows/tests.yml"><img src="https://github.com/LabStrangeLoop/scratchgpt/actions/workflows/tests.yml/badge.svg" alt="Tests Status"></a>
   <a href="https://github.com/LabStrangeLoop/scratchgpt/actions/workflows/lint.yml"><img src="https://github.com/LabStrangeLoop/scratchgpt/actions/workflows/lint.yml/badge.svg" alt="Lint Status"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-  <a href="https://pypi.org/project/scratchgpt/"><img src="https://img.shields.io/pypi/pyversions/3.12.svg" alt="Python versions"></a>
+  <a href="https://pypi.org/project/scratchgpt/"><img src="https://img.shields.io/pypi/pyversions/scratchgpt" alt="Python versions"></a>
 </p>
 
 ScratchGPT is a Python project that implements a small-scale transformer-based
