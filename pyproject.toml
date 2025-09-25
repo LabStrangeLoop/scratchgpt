@@ -1,6 +1,6 @@
 [project]
 name = "scratchgpt"
-version = "0.5.0"
+version = "0.5.1"
 description = "A small-scale transformer-based language model implemented from scratch in Python."
 authors = [
   { name = "Aleksandr Yeganov", email = "ayeganov@gmail.com"},
