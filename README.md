@@ -142,12 +142,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## How To Publish To PyPI
 
 ```
-```
 export UV_PUBLISH_USERNAME=__token__
 export UV_PUBLISH_PASSWORD=
 uv build -vv --wheel
 uv publish --publish-url https://upload.pypi.org/legacy/
-```
 ```
 
 ## License
