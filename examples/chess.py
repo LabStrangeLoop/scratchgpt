@@ -25,7 +25,6 @@ from urllib.request import urlretrieve
 
 import torch
 import zstandard as zstd
-from torch.nn import functional as F
 from torch.optim import AdamW
 
 from examples.chess_tokenizer import ChessTokenizer
@@ -43,7 +42,8 @@ from scratchgpt.data import create_data_source
 # from scratchgpt import CharTokenizer
 
 # Default Lichess database file
-DEFAULT_LICHESS_URL = "https://database.lichess.org/standard/lichess_db_standard_rated_2016-02.pgn.zst"
+DEFAULT_LICHESS_URL: str = "https://database.lichess.org/standard/lichess_db_standard_rated_2016-02.pgn.zst"
+GAME_PREVIEW_MAX_LENGTH: int = 80
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
 class ChessDataLoader:
     """Handles downloading and parsing of Lichess chess databases."""
 
-    def __init__(self, game_url: str):
+    def __init__(self, game_url: str) -> None:
         self.game_url = game_url
 
     def download_and_parse(self) -> str:
@@ -106,7 +106,7 @@ class ChessDataLoader:
             for line_num, line in enumerate(f, 1):
                 line = line.strip()
 
-                if line_num % 100_000 == 0:
+                if line_num % 1_000_000 == 0:
                     print(f"Processed {line_num:,} lines, found {games_processed:,} games")
                 if line.startswith("["):
                     continue
@@ -143,10 +143,10 @@ class ChessDataLoader:
 
         # Remove game results from the end
         for result in ["1-0", "0-1", "1/2-1/2", "*"]:
-            if game_text.endswith(" " + result):
-                game_text = game_text[: -len(" " + result)].strip()
+            suffix = f" {result}"
+            if game_text.endswith(suffix):
+                game_text = game_text.removesuffix(suffix)
                 break
-
         return game_text
 
 
@@ -183,38 +183,24 @@ def generate_chess_moves(
     temperature: float = 0.8,
 ) -> str:
     """
-    Generate chess moves given the start of a game.
+    Generate chess moves one at a time.
 
     Uses moderate temperature to balance chess-like patterns with some creativity.
     """
     model.eval()
 
-    # Encode the game start
-    context = torch.tensor(tokenizer.encode(game_start)).unsqueeze(0).to(device)
+    current_game = game_start
 
     with torch.no_grad():
-        # Generate tokens (approximately 4-6 tokens per move)
-        for _ in range(max_moves * 6):
-            # Crop context to model's block size
-            cropped_context = context[:, -model._block_size :]
+        for _ in range(max_moves):
+            # Encode current game state
+            context = torch.tensor(tokenizer.encode(current_game)).unsqueeze(0).to(device)
 
-            # Get logits and apply temperature
-            logits = model(cropped_context)
-            logits = logits[:, -1, :] / temperature
+            # Generate tokens for one move (typically 4-6 tokens)
+            context = model.generate(context=context, max_new_tokens=6, temperature=temperature)
+            current_game = tokenizer.decode(context[0].tolist())
 
-            # Sample from the distribution
-            probs = F.softmax(logits, dim=-1)
-            next_token = torch.multinomial(probs, num_samples=1)
-
-            # Append to context
-            context = torch.cat((context, next_token), dim=1)
-
-            # Stop if we've generated enough content
-            current_length = len(tokenizer.decode(context[0].tolist()))
-            if current_length > len(game_start) + max_moves * 8:  # Rough estimate
-                break
-
-    return tokenizer.decode(context[0].tolist())
+    return current_game
 
 
 def main() -> None:
@@ -237,7 +223,7 @@ def main() -> None:
     sample_games = games_text.split("\n")[:3]
     print("\nSample parsed games:")
     for i, game in enumerate(sample_games, 1):
-        preview = game[:80] + "..." if len(game) > 80 else game
+        preview = game[:GAME_PREVIEW_MAX_LENGTH] + "..." if len(game) > GAME_PREVIEW_MAX_LENGTH else game
         print(f"{i}: {preview}")
 
     # Step 2: Setup tokenizer

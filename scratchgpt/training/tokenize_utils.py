@@ -87,12 +87,12 @@ def prepare_dataset_for_training(
 
 class SlidingWindowDataset(TorchDataset[dict[str, Tensor]]):
     def __init__(
-            self,
-            hf_dataset: HFDataset,
-            tokenizer: Tokenizer,
-            block_size: int,
-            text_column: str,
-            ) -> None:
+        self,
+        hf_dataset: HFDataset,
+        tokenizer: Tokenizer,
+        block_size: int,
+        text_column: str,
+    ) -> None:
         super().__init__()
 
         self.block_size = block_size

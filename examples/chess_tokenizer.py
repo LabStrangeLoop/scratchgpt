@@ -30,7 +30,7 @@ class ChessTokenizer(SerializableTokenizer):
         """Generates the complete, deterministic vocabulary for chess."""
         # Control and special tokens
         tokens = {"[PAD]", "[UNK]", "[BOS]", "[EOS]", "*", "+", "#"}
-        tokens.add("O-O")    # Kingside castling
+        tokens.add("O-O")  # Kingside castling
         tokens.add("O-O-O")  # Queenside castling
 
         # Move numbers (1. to 300. and 1... to 300...)
