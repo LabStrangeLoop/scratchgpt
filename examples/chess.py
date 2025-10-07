@@ -119,7 +119,8 @@ class ChessDataLoader:
                     game_text = " ".join(current_game_lines).strip()
                     clean_text = self._clean_game_text(game_text)
                     # Only keep games with more than 2 moves
-                    if len(clean_text.split()) > 2:
+                    has_many_moves = len(clean_text.split()) > 2
+                    if has_many_moves:
                         games.append(clean_text)
                         games_processed += 1
 
