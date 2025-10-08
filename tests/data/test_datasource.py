@@ -114,12 +114,7 @@ def multiline_text_file(tmp_path: Path) -> Path:
     """Creates a text file with multiple lines for proper splitting."""
     data_path = tmp_path / "multiline.txt"
     # Each line becomes a separate sample in the dataset
-    data_path.write_text(
-        "0123456789abcdef\n"
-        "0123456789abcdef\n"
-        "0123456789abcdef\n"
-        "0123456789abcdef"
-    )
+    data_path.write_text("0123456789abcdef\n0123456789abcdef\n0123456789abcdef\n0123456789abcdef")
     return data_path
 
 

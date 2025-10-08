@@ -68,6 +68,11 @@ projects using ScratchGPT.
 
 Please take a look at the [simple example](./examples/simple.py) in the examples folder.
 
+**Note:** Some examples require additional dependencies. To run all examples, install the optional dependencies:
+```bash
+uv sync --extra examples-dependencies
+```
+
 ## Usage
 
 ### Training
